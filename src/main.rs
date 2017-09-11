@@ -33,14 +33,7 @@ use std::collections::BTreeMap;
 
 use chrono::Local;
 
-struct TextureCommand {
-    pub tex_ptr  : GlTexture,
-    pub vertices : Vec<f32>
-}
-
 fn gl_loop(context: Context) {
-    let dimensions = Context::get_resolution();
-
     // init shaders
     let mut drawer = Drawer::new(context);
 
@@ -56,6 +49,7 @@ fn gl_loop(context: Context) {
     // load rusttype font into memory
     let font_data = include_bytes!("../res/opensans.ttf");
 
+    // TODO: Convert into Font (private)/FontCache
     let collection = FontCollection::from_bytes(font_data as &[u8]);
     let font = collection.into_font().unwrap(); // only succeeds if collection consists of one font
 
@@ -64,25 +58,17 @@ fn gl_loop(context: Context) {
 
     let mut map = BTreeMap::new();
 
-    let bg_cmd = TextureCommand {
-        vertices : [
-            -1.0,   1.0,
-            -1.0,  -1.0,
-            1.0,  -1.0,
-
-            -1.0,  -1.0,
-            1.0,   1.0,
-            1.0,  -1.0
-        ].to_vec(),
-        tex_ptr : GlTexture::from_image(&bg_image.to_rgba())
-    };
+    let bg = GlTexture::from_image(&bg_image.to_rgba());
 
     for _ in 0 .. 5 {
         drawer.start();
         let screen_width = drawer.get_width() as i32;
         let screen_height = drawer.get_height() as i32;
 
-        drawer.draw_texture_sized(&bg_cmd.tex_ptr, Rect::new(0, 0, screen_width, screen_height));
+        drawer.draw_texture_sized(&bg, &Rect::new(0, 0, screen_width, screen_height));
+
+        drawer.draw_colored_rect(&Rect::new(0, 0, screen_width, 100),
+                                 &Color::new_4byte(0, 0, 0, 100));
 
         {
             let time = Local::now();
@@ -90,7 +76,7 @@ fn gl_loop(context: Context) {
             let msg = format!("FPS: {}\n{}", counter.tick(), time);
             let layout = font.layout(&msg,
                                      Scale { x: 60.0, y: 50.0 },
-                                     point(20.0, 50.0));
+                                     point(20.0, screen_height - 50.0));
 
             let base_color = Color::new_3byte(255, 255, 255);
             for letter in layout {
@@ -128,7 +114,7 @@ fn gl_loop(context: Context) {
 
                 // Setup vertice data
                 drawer.draw_texture(tex,
-                                    Position::new(bounding_box.min.x as i32,
+                                    &Position::new(bounding_box.min.x as i32,
                                                   bounding_box.min.y as i32));
             }
         }

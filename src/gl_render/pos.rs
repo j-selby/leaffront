@@ -21,7 +21,7 @@ pub struct Rect {
 }
 
 impl Rect {
-    pub fn new_from_pos(pos : Position, width : i32, height : i32) -> Self {
+    pub fn new_from_pos(pos : &Position, width : i32, height : i32) -> Self {
         Rect {
             x : pos.x, y : pos.y, width, height
         }
