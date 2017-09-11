@@ -31,6 +31,7 @@ use pi::gl_context::Context;
 use image::load_from_memory;
 
 use chrono::Local;
+use chrono::Datelike;
 
 fn gl_loop(context: Context) {
     // init shaders
@@ -69,15 +70,29 @@ fn gl_loop(context: Context) {
 
         drawer.enable_blending();
 
-        drawer.draw_colored_rect(&Rect::new(0, screen_height - 100, screen_width, 100),
+        drawer.draw_colored_rect(&Rect::new(0, screen_height - 120, screen_width, 120),
                                  &Color::new_4byte(0, 0, 0, 100));
 
-        let time = Local::now();
-        let time = time.format("%-I:%M:%S %P").to_string();
+        let datetime = Local::now();
+        let time = datetime.format("%-I:%M:%S %P").to_string();
         let msg = format!("{}", time);
 
         font.draw(&msg,  &Color::new_3byte(255, 255, 255),
-                  50, &Position::new(20, screen_height - 50), &mut drawer);
+                  50, &Position::new(20, screen_height - 75), &mut drawer);
+
+        let suffix = match datetime.day() {
+            1 | 21 | 31 => "st",
+            2 | 22 => "nd",
+            3 | 23 => "rd",
+            _ => "th",
+        };
+
+        //let time = datetime.format("%A, %-D").to_string();
+        let msg = format!("{}{} of {}", datetime.format("%A, %-d").to_string(), suffix,
+                          datetime.format("%B").to_string());
+
+        font.draw(&msg,  &Color::new_3byte(255, 255, 255),
+                  50, &Position::new(20, screen_height - 25), &mut drawer);
 
         font.draw(&format!("FPS: {}", counter.tick()),
                   &Color::new_3byte(255, 255, 255),
