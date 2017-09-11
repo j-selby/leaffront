@@ -102,7 +102,7 @@ impl Drawer {
             min_x, -max_y,
             max_x, -max_y,
             // Vertex 2
-            min_x, -max_y,
+            min_x, -min_y,
             max_x, -min_y,
             max_x, -max_y,
         ]
@@ -147,7 +147,7 @@ impl Drawer {
 
         texture.bind_texture(gl::GL_TEXTURE_2D);
 
-        gl::draw_arrays(gl::GL_TRIANGLE_FAN, 0, (vertices.len() / 2) as gl::GLsizei);
+        gl::draw_arrays(gl::GL_TRIANGLE_STRIP, 0, (vertices.len() / 2) as gl::GLsizei);
     }
 
     /// Draws a texture to the screen, with a specified set of vertices to draw to, and a
@@ -157,7 +157,7 @@ impl Drawer {
             0.0, 0.0,
             0.0, 1.0,
             1.0, 1.0,
-            0.0, 1.0,
+            0.0, 0.0,
             1.0, 0.0,
             1.0, 1.0
         ])
@@ -187,7 +187,7 @@ impl Drawer {
         self.vertex.set_data(vertices);
         self.color.set_data(colors);
 
-        gl::draw_arrays(gl::GL_TRIANGLE_FAN, 0, (vertices.len() / 2) as gl::GLsizei);
+        gl::draw_arrays(gl::GL_TRIANGLE_STRIP, 0, (vertices.len() / 2) as gl::GLsizei);
     }
 
     /// Draws a colored rectangle to the screen, with a single color.
