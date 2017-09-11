@@ -60,14 +60,16 @@ fn gl_loop(context: Context) {
 
     let bg = GlTexture::from_image(&bg_image.to_rgba());
 
-    for _ in 0 .. 5 {
-        drawer.start();
+    for _ in 0 .. 5000 {
+        drawer.start(false);
         let screen_width = drawer.get_width() as i32;
         let screen_height = drawer.get_height() as i32;
 
         drawer.draw_texture_sized(&bg, &Rect::new(0, 0, screen_width, screen_height));
 
-        drawer.draw_colored_rect(&Rect::new(0, 0, screen_width, 100),
+        drawer.enable_blending();
+
+        drawer.draw_colored_rect(&Rect::new(0, screen_height - 100, screen_width, 100),
                                  &Color::new_4byte(0, 0, 0, 100));
 
         {
@@ -76,7 +78,7 @@ fn gl_loop(context: Context) {
             let msg = format!("FPS: {}\n{}", counter.tick(), time);
             let layout = font.layout(&msg,
                                      Scale { x: 60.0, y: 50.0 },
-                                     point(20.0, screen_height - 50.0));
+                                     point(20.0, screen_height as f32 - 50.0));
 
             let base_color = Color::new_3byte(255, 255, 255);
             for letter in layout {
@@ -121,7 +123,7 @@ fn gl_loop(context: Context) {
 
         drawer.end();
 
-        std::thread::sleep(std::time::Duration::new(1, 0));
+        //std::thread::sleep(std::time::Duration::new(1, 0));
     }
 }
 

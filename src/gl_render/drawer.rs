@@ -31,12 +31,16 @@ pub struct Drawer {
 
     // Used by both shaders
     vertex : GLVBO,
+    attr_colored_vertex : gl::GLint,
+    attr_textured_vertex : gl::GLint,
 
     // Used by colored shader
     color : GLVBO,
+    attr_colored_color : gl::GLint,
 
     // Used by textured shader
     uv : GLVBO,
+    attr_textured_uv : gl::GLint,
 
     context : Context
 }
@@ -55,39 +59,30 @@ impl Drawer {
                 DrawState::Colored => {
                     self.colored.use_program();
 
-                    // TODO: Cache these
-                    let input_vertex = self.colored.get_attribute("input_vertex");
-                    let input_color = self.colored.get_attribute("input_color");
+                    gl::enable_vertex_attrib_array(self.attr_colored_color as gl::GLuint);
+                    gl::enable_vertex_attrib_array(self.attr_colored_vertex as gl::GLuint);
 
-                    gl::enable_vertex_attrib_array(input_color as gl::GLuint);
-                    gl::enable_vertex_attrib_array(input_vertex as gl::GLuint);
-
-                    // TODO: Check that these bindings persist
                     self.vertex.bind();
-                    gl::vertex_attrib_pointer_offset(input_vertex as gl::GLuint, 2,
+                    gl::vertex_attrib_pointer_offset(self.attr_colored_vertex as gl::GLuint, 2,
                                                      gl::GL_FLOAT, false, 0, 0);
                     self.color.bind();
-                    gl::vertex_attrib_pointer_offset(input_color as gl::GLuint, 4,
+                    gl::vertex_attrib_pointer_offset(self.attr_colored_color as gl::GLuint, 4,
                                                      gl::GL_FLOAT, false, 0, 0);
                 },
                 DrawState::Textured => {
                     self.textured.use_program();
 
-                    // TODO: Cache these
-                    let input_uv = self.textured.get_attribute("input_uv");
-                    let input_vertex = self.textured.get_attribute("input_vertex");
-
-                    gl::enable_vertex_attrib_array(input_uv as gl::GLuint);
-                    gl::enable_vertex_attrib_array(input_vertex as gl::GLuint);
+                    gl::enable_vertex_attrib_array(self.attr_textured_uv as gl::GLuint);
+                    gl::enable_vertex_attrib_array(self.attr_textured_vertex as gl::GLuint);
 
                     // TODO: Use color in textured shader
 
                     self.uv.bind();
-                    gl::vertex_attrib_pointer_offset(input_uv as gl::GLuint, 2,
+                    gl::vertex_attrib_pointer_offset(self.attr_textured_uv as gl::GLuint, 2,
                                                      gl::GL_FLOAT, false, 0, 0);
 
                     self.vertex.bind();
-                    gl::vertex_attrib_pointer_offset(input_vertex as gl::GLuint, 2,
+                    gl::vertex_attrib_pointer_offset(self.attr_textured_vertex as gl::GLuint, 2,
                                                      gl::GL_FLOAT, false, 0, 0);
                 },
             }
@@ -118,15 +113,14 @@ impl Drawer {
     }
 
     /// Starts this frame.
-    pub fn start(&mut self) {
+    pub fn start(&mut self, clear : bool) {
         self.size = Context::get_resolution();
         self.state = DrawState::None;
 
-        gl::clear_color(0.0, 1.0, 0.0, 1.0);
-        gl::clear(gl::GL_COLOR_BUFFER_BIT);
-
-        gl::enable(gl::GL_BLEND);
-        gl::blend_func(gl::GL_SRC_ALPHA, gl::GL_ONE_MINUS_SRC_ALPHA);
+        if clear {
+            gl::clear_color(0.0, 1.0, 0.0, 1.0);
+            gl::clear(gl::GL_COLOR_BUFFER_BIT);
+        }
     }
 
     /// Ends this frame.
@@ -141,6 +135,12 @@ impl Drawer {
         if !self.context.swap_buffers() {
             panic!("Failed to swap buffers!");
         }
+    }
+
+    /// Enables blending of alpha textures. Disabled at end of frame.
+    pub fn enable_blending(&self) {
+        gl::enable(gl::GL_BLEND);
+        gl::blend_func(gl::GL_SRC_ALPHA, gl::GL_ONE_MINUS_SRC_ALPHA);
     }
 
     /// Draws a texture to the screen, with a specified set of vertices to draw to, and a UV
@@ -235,10 +235,18 @@ impl Drawer {
         let colored_shader = GLSLShader::create_shader(
             include_bytes!("../../res/shaders/color.vert"),
             include_bytes!("../../res/shaders/color.frag")).unwrap();
+        colored_shader.use_program();
+
+        let attr_colored_vertex = colored_shader.get_attribute("input_vertex");
+        let attr_colored_color = colored_shader.get_attribute("input_color");
 
         let textured_shader = GLSLShader::create_shader(
             include_bytes!("../../res/shaders/tex.vert"),
             include_bytes!("../../res/shaders/tex.frag")).unwrap();
+
+        textured_shader.use_program();
+        let attr_textured_vertex = textured_shader.get_attribute("input_vertex");
+        let attr_textured_uv = textured_shader.get_attribute("input_uv");
 
         Drawer {
             context,
@@ -247,8 +255,12 @@ impl Drawer {
             colored  : colored_shader,
             textured : textured_shader,
             vertex   : vertex_vbo,
+            attr_colored_vertex,
+            attr_textured_vertex,
             color    : color_vbo,
-            uv       : uv_vbo
+            attr_colored_color,
+            uv       : uv_vbo,
+            attr_textured_uv
         }
     }
 }
