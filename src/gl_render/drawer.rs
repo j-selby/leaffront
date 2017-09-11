@@ -58,6 +58,7 @@ impl Drawer {
         }
     }
 
+    /// Starts this frame.
     pub fn start(&mut self) {
         self.size = Context::get_resolution();
         self.state = DrawState::None;
@@ -69,6 +70,7 @@ impl Drawer {
         gl::blend_func(gl::GL_SRC_ALPHA, gl::GL_ONE_MINUS_SRC_ALPHA);
     }
 
+    /// Ends this frame.
     pub fn end(&mut self) {
         self.state = DrawState::None;
 
@@ -144,6 +146,15 @@ impl Drawer {
         self.draw_texture_sized(texture, pos, width as i32, height as i32)
     }
 
+    /// Returns the width of the screen.
+    pub fn get_width(&self) -> usize {
+        return self.size.width as usize;
+    }
+
+    /// Returns the height of the screen.
+    pub fn get_height(&self) -> usize {
+        return self.size.height as usize;
+    }
 
     /// Creates a new drawer.
     pub fn new(context : Context) -> Self {

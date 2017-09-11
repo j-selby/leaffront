@@ -78,7 +78,11 @@ fn gl_loop(context: Context) {
 
     for _ in 0 .. 5 {
         drawer.start();
-        drawer.draw_textured_vertices(&bg_cmd.tex_ptr, &bg_cmd.vertices);
+        let screen_width = drawer.get_width() as i32;
+        let screen_height = drawer.get_height() as i32;
+
+        drawer.draw_texture_sized(&bg_cmd.tex_ptr, Position::new(0, 0),
+                                  screen_width, screen_height);
 
         {
             let time = Local::now();
@@ -123,7 +127,9 @@ fn gl_loop(context: Context) {
                 let tex = map.get(&letter.id()).unwrap();
 
                 // Setup vertice data
-                drawer.draw_texture(tex, Position::new(bounding_box.min.x as i32, bounding_box.min.y as i32));
+                drawer.draw_texture(tex,
+                                    Position::new(bounding_box.min.x as i32,
+                                                  bounding_box.min.y as i32));
             }
         }
 
