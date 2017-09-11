@@ -189,9 +189,13 @@ impl Drop for Context {
         dispmanx::element_remove(self.update, self.element);
 
         dispmanx::update_submit_sync(self.update);
-
-        dispmanx::display_close(self.dispman_display);
         // "Update" cannot be deleted?
+
+        if !dispmanx::display_close(self.dispman_display) {
+            println!("Display shutdown successful.");
+        } else {
+            println!("Display shutdown failed.");
+        }
 
         bcm_host::deinit();
     }
