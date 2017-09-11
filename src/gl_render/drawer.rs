@@ -2,6 +2,10 @@
 
 use opengles::glesv2 as gl;
 
+use videocore::bcm_host::GraphicsDisplaySize;
+
+use pi::gl_context::Context;
+
 use gl_render::shader::GLSLShader;
 use gl_render::vbo::GLVBO;
 use gl_render::texture::GlTexture;
@@ -16,6 +20,8 @@ enum DrawState {
 pub struct Drawer {
     state : DrawState,
 
+    size : GraphicsDisplaySize,
+
     colored : GLSLShader,
     textured : GLSLShader,
 
@@ -26,7 +32,9 @@ pub struct Drawer {
     color : GLVBO,
 
     // Used by textured shader
-    uv : GLVBO
+    uv : GLVBO,
+
+    context : Context
 }
 
 impl Drawer {
@@ -49,9 +57,32 @@ impl Drawer {
         }
     }
 
+    pub fn start(&mut self) {
+        self.state = DrawState::None;
+
+        gl::clear_color(0.0, 1.0, 0.0, 1.0);
+        gl::clear(gl::GL_COLOR_BUFFER_BIT);
+
+        gl::enable(gl::GL_BLEND);
+        gl::blend_func(gl::GL_SRC_ALPHA, gl::GL_ONE_MINUS_SRC_ALPHA);
+    }
+
+    pub fn end(&mut self) {
+        self.state = DrawState::None;
+
+        gl::use_program(0);
+        gl::bind_buffer(gl::GL_ARRAY_BUFFER, 0);
+
+        gl::disable(gl::GL_BLEND);
+
+        if !self.context.swap_buffers() {
+            panic!("Failed to swap buffers!");
+        }
+    }
+
     /// Draws a texture to the screen, with a specified set of vertices to draw to, and a UV
     /// to decode the image with.
-    pub fn draw_textured_vertices_uv(&mut self, texture : GlTexture, vertices : &[f32], uv : &[f32]) {
+    pub fn draw_textured_vertices_uv(&mut self, texture : &GlTexture, vertices : &[f32], uv : &[f32]) {
         self.configure_state(DrawState::Textured);
 
         self.vertex.set_data(vertices);
@@ -65,7 +96,7 @@ impl Drawer {
 
     /// Draws a texture to the screen, with a specified set of vertices to draw to, and a
     /// default UV.
-    pub fn draw_textured_vertices(&mut self, texture : GlTexture, vertices : &[f32]) {
+    pub fn draw_textured_vertices(&mut self, texture : &GlTexture, vertices : &[f32]) {
         self.draw_textured_vertices_uv(texture, vertices, &[
             0.0, 0.0,
             0.0, 1.0,
@@ -77,7 +108,11 @@ impl Drawer {
     }
 
     /// Creates a new drawer.
-    pub fn new() -> Self {
+    pub fn new(context : Context) -> Self {
+        let size = Context::get_resolution();
+
+        gl::viewport(0, 0, size.width as i32, size.height as i32);
+
         let vertex_vbo = GLVBO::new();
         let color_vbo = GLVBO::new();
         let uv_vbo = GLVBO::new();
@@ -86,8 +121,13 @@ impl Drawer {
             include_bytes!("../../res/shaders/color.vert"),
             include_bytes!("../../res/shaders/color.frag")).unwrap();
 
+        colored_shader.use_program();
+
         let input_vertex = colored_shader.get_attribute("input_vertex");
         let input_color = colored_shader.get_attribute("input_color");
+
+        gl::enable_vertex_attrib_array(input_color as gl::GLuint);
+        gl::enable_vertex_attrib_array(input_vertex as gl::GLuint);
 
         // TODO: Check that these bindings persist
         vertex_vbo.bind();
@@ -103,8 +143,12 @@ impl Drawer {
 
         // TODO: Check that these bindings persist
         textured_shader.use_program();
+
         let input_uv = textured_shader.get_attribute("input_uv");
         let input_vertex = textured_shader.get_attribute("input_vertex");
+
+        gl::enable_vertex_attrib_array(input_uv as gl::GLuint);
+        gl::enable_vertex_attrib_array(input_vertex as gl::GLuint);
 
         uv_vbo.bind();
         gl::vertex_attrib_pointer_offset(input_uv as gl::GLuint, 2,
@@ -115,6 +159,8 @@ impl Drawer {
                                          gl::GL_FLOAT, false, 0, 0);
 
         Drawer {
+            context,
+            size,
             state    : DrawState::None,
             colored  : colored_shader,
             textured : textured_shader,
