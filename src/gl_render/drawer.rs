@@ -59,21 +59,17 @@ impl Drawer {
                 DrawState::Colored => {
                     self.colored.use_program();
 
-                    gl::enable_vertex_attrib_array(self.attr_colored_color as gl::GLuint);
-                    gl::enable_vertex_attrib_array(self.attr_colored_vertex as gl::GLuint);
-
                     self.vertex.bind();
                     gl::vertex_attrib_pointer_offset(self.attr_colored_vertex as gl::GLuint, 2,
                                                      gl::GL_FLOAT, false, 0, 0);
+
                     self.color.bind();
                     gl::vertex_attrib_pointer_offset(self.attr_colored_color as gl::GLuint, 4,
                                                      gl::GL_FLOAT, false, 0, 0);
                 },
                 DrawState::Textured => {
                     self.textured.use_program();
-
-                    gl::enable_vertex_attrib_array(self.attr_textured_uv as gl::GLuint);
-                    gl::enable_vertex_attrib_array(self.attr_textured_vertex as gl::GLuint);
+                    gl::active_texture(gl::GL_TEXTURE_2D);
 
                     // TODO: Use color in textured shader
 
@@ -113,14 +109,12 @@ impl Drawer {
     }
 
     /// Starts this frame.
-    pub fn start(&mut self, clear : bool) {
+    pub fn start(&mut self) {
         self.size = Context::get_resolution();
         self.state = DrawState::None;
 
-        if clear {
-            gl::clear_color(0.0, 1.0, 0.0, 1.0);
-            gl::clear(gl::GL_COLOR_BUFFER_BIT);
-        }
+        gl::clear_color(0.0, 1.0, 0.0, 1.0);
+        gl::clear(gl::GL_COLOR_BUFFER_BIT);
     }
 
     /// Ends this frame.
@@ -151,7 +145,6 @@ impl Drawer {
         self.vertex.set_data(vertices);
         self.uv.set_data(uv);
 
-        gl::active_texture(gl::GL_TEXTURE_2D);
         texture.bind_texture(gl::GL_TEXTURE_2D);
 
         gl::draw_arrays(gl::GL_TRIANGLE_FAN, 0, (vertices.len() / 2) as gl::GLsizei);
@@ -235,10 +228,13 @@ impl Drawer {
         let colored_shader = GLSLShader::create_shader(
             include_bytes!("../../res/shaders/color.vert"),
             include_bytes!("../../res/shaders/color.frag")).unwrap();
-        colored_shader.use_program();
 
+        colored_shader.use_program();
         let attr_colored_vertex = colored_shader.get_attribute("input_vertex");
         let attr_colored_color = colored_shader.get_attribute("input_color");
+
+        gl::enable_vertex_attrib_array(attr_colored_color as gl::GLuint);
+        gl::enable_vertex_attrib_array(attr_colored_vertex as gl::GLuint);
 
         let textured_shader = GLSLShader::create_shader(
             include_bytes!("../../res/shaders/tex.vert"),
@@ -247,6 +243,9 @@ impl Drawer {
         textured_shader.use_program();
         let attr_textured_vertex = textured_shader.get_attribute("input_vertex");
         let attr_textured_uv = textured_shader.get_attribute("input_uv");
+
+        gl::enable_vertex_attrib_array(attr_textured_uv as gl::GLuint);
+        gl::enable_vertex_attrib_array(attr_textured_vertex as gl::GLuint);
 
         Drawer {
             context,

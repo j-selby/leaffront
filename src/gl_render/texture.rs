@@ -39,9 +39,9 @@ impl GlTexture {
                          &bytes);
 
         gl::tex_parameteri(gl::GL_TEXTURE_2D, gl::GL_TEXTURE_MIN_FILTER,
-                           gl::GL_LINEAR as gl::GLint);
+                           gl::GL_NEAREST as gl::GLint);
         gl::tex_parameteri(gl::GL_TEXTURE_2D, gl::GL_TEXTURE_MAG_FILTER,
-                           gl::GL_LINEAR as gl::GLint);
+                           gl::GL_NEAREST as gl::GLint);
 
         gl::tex_parameteri(gl::GL_TEXTURE_2D, gl::GL_TEXTURE_WRAP_S,
                            gl::GL_CLAMP_TO_EDGE as gl::GLint);

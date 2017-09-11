@@ -59,9 +59,10 @@ fn gl_loop(context: Context) {
     let mut map = BTreeMap::new();
 
     let bg = GlTexture::from_image(&bg_image.to_rgba());
+    // TODO: Manually resize background to correct resolution ourselves
 
     for _ in 0 .. 5000 {
-        drawer.start(false);
+        drawer.start();
         let screen_width = drawer.get_width() as i32;
         let screen_height = drawer.get_height() as i32;
 
