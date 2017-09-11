@@ -15,16 +15,13 @@ mod texture;
 mod gl_render;
 mod pi;
 
-use opengles::glesv2 as gl;
-
 use rusttype::{FontCollection, Scale, point};
 
 use color::Color;
 use texture::Texture;
 
 use gl_render::texture::GlTexture;
-use gl_render::shader::GLSLShader;
-use gl_render::vbo::GLVBO;
+use gl_render::drawer::Drawer;
 
 use pi::gl_context::Context;
 
@@ -42,32 +39,8 @@ struct TextureCommand {
 fn gl_loop(context: Context) {
     let dimensions = Context::get_resolution();
 
-    gl::viewport(0, 0, dimensions.width as i32, dimensions.height as i32);
-
     // init shaders
-    let program = GLSLShader::create_shader(include_bytes!("../res/shaders/tex.vert"),
-                                            include_bytes!("../res/shaders/tex.frag")).unwrap();
-
-    program.use_program();
-
-    // get attributes
-    let input_uv = program.get_attribute("input_uv");
-    let input_vertex = program.get_attribute("input_vertex");
-
-    let vertex_vbo = GLVBO::new();
-    let texture_vbo = GLVBO::new();
-
-    // texture UVs
-    let uv : [f32; 12] = [
-        0.0, 0.0,
-        0.0, 1.0,
-        1.0, 1.0,
-        0.0, 1.0,
-        1.0, 0.0,
-        1.0, 1.0
-    ];
-
-    texture_vbo.set_data(&uv);
+    let mut drawer = Drawer::new(context);
 
     // load background image
     println!("Load image:");
@@ -103,34 +76,8 @@ fn gl_loop(context: Context) {
     };
 
     for _ in 0 .. 5 {
-        gl::clear_color(0.0, 1.0, 0.0, 1.0);
-        gl::clear(gl::GL_COLOR_BUFFER_BIT);
-
-        program.use_program();
-
-        gl::enable_vertex_attrib_array(input_uv as gl::GLuint);
-        gl::enable_vertex_attrib_array(input_vertex as gl::GLuint);
-
-        //gl::disable(gl::GL_CULL_FACE);
-        gl::enable(gl::GL_BLEND);
-        gl::blend_func(gl::GL_SRC_ALPHA, gl::GL_ONE_MINUS_SRC_ALPHA);
-
-        texture_vbo.bind();
-        gl::vertex_attrib_pointer_offset(input_uv as gl::GLuint, 2,
-                                         gl::GL_FLOAT, false, 0, 0);
-
-        vertex_vbo.bind();
-        gl::vertex_attrib_pointer_offset(input_vertex as gl::GLuint, 2,
-                                         gl::GL_FLOAT, false, 0, 0);
-
-
-        //gl::bind_buffer(gl::GL_ARRAY_BUFFER, vertex_vbo);
-        gl::buffer_data(gl::GL_ARRAY_BUFFER, &bg_cmd.vertices, gl::GL_STATIC_DRAW);
-
-        gl::active_texture(gl::GL_TEXTURE_2D);
-        bg_cmd.tex_ptr.bind_texture(gl::GL_TEXTURE_2D);
-
-        gl::draw_arrays(gl::GL_TRIANGLE_FAN, 0, 6);
+        drawer.start();
+        drawer.draw_textured_vertices(&bg_cmd.tex_ptr, &bg_cmd.vertices);
 
         {
             let time = Local::now();
@@ -191,37 +138,14 @@ fn gl_loop(context: Context) {
                 //println!("Vertices: {:?}", vertices);
                 //println!("Allocated texture of size: {} {}", tex.get_width(), tex.get_height());
 
-                /*let cmd = TextureCommand {
-                    tex_ptr: opengl_tex,
-                    vertices: vertices.to_vec()
-                };*/
-
                 let tex = map.get(&letter.id()).unwrap();
 
-
-                // TODO: Setup texture UV data
                 // Setup vertice data
-                vertex_vbo.set_data(&vertices);
-
-                gl::active_texture(gl::GL_TEXTURE_2D);
-                tex.bind_texture(gl::GL_TEXTURE_2D);
-
-                gl::draw_arrays(gl::GL_TRIANGLE_FAN, 0, 6);
-                //commands.push(cmd);
+                drawer.draw_textured_vertices(tex, &vertices);
             }
         }
 
-        //println!("Render: {}", counter.tick());
-
-        gl::disable_vertex_attrib_array(input_vertex as gl::GLuint);
-        gl::disable_vertex_attrib_array(input_uv as gl::GLuint);
-
-        gl::bind_buffer(gl::GL_ARRAY_BUFFER, 0);
-
-        // swap graphics buffers
-        if !context.swap_buffers() {
-            println!("Failed to swap buffers!");
-        }
+        drawer.end();
 
         std::thread::sleep(std::time::Duration::new(1, 0));
     }
