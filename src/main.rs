@@ -24,6 +24,7 @@ use texture::Texture;
 
 use gl_render::texture::GlTexture;
 use gl_render::shader::GLSLShader;
+use gl_render::vbo::GLVBO;
 
 use pi::gl_context::Context;
 
@@ -53,12 +54,24 @@ fn gl_loop(context: Context) {
     let input_uv = program.get_attribute("input_uv");
     let input_vertex = program.get_attribute("input_vertex");
 
-    // load triangle vertex data into buffer
-    let (vertex_vbo, texture_vbo) = init_triangle();
+    let vertex_vbo = GLVBO::new();
+    let texture_vbo = GLVBO::new();
+
+    // texture UVs
+    let uv : [f32; 12] = [
+        0.0, 0.0,
+        0.0, 1.0,
+        1.0, 1.0,
+        0.0, 1.0,
+        1.0, 0.0,
+        1.0, 1.0
+    ];
+
+    texture_vbo.set_data(&uv);
 
     // load background image
     println!("Load image:");
-    let bg_image = load_from_memory(include_bytes!("../res/bg.png")).unwrap();
+    let bg_image = load_from_memory(include_bytes!("../res/bg.jpg")).unwrap();
     println!("Convert");
 
     println!("Upload");
@@ -102,11 +115,11 @@ fn gl_loop(context: Context) {
         gl::enable(gl::GL_BLEND);
         gl::blend_func(gl::GL_SRC_ALPHA, gl::GL_ONE_MINUS_SRC_ALPHA);
 
-        gl::bind_buffer(gl::GL_ARRAY_BUFFER, texture_vbo);
+        texture_vbo.bind();
         gl::vertex_attrib_pointer_offset(input_uv as gl::GLuint, 2,
                                          gl::GL_FLOAT, false, 0, 0);
 
-        gl::bind_buffer(gl::GL_ARRAY_BUFFER, vertex_vbo);
+        vertex_vbo.bind();
         gl::vertex_attrib_pointer_offset(input_vertex as gl::GLuint, 2,
                                          gl::GL_FLOAT, false, 0, 0);
 
@@ -115,7 +128,7 @@ fn gl_loop(context: Context) {
         gl::buffer_data(gl::GL_ARRAY_BUFFER, &bg_cmd.vertices, gl::GL_STATIC_DRAW);
 
         gl::active_texture(gl::GL_TEXTURE_2D);
-        gl::bind_texture(gl::GL_TEXTURE_2D, bg_cmd.tex_ptr.get_raw_ptr());
+        bg_cmd.tex_ptr.bind_texture(gl::GL_TEXTURE_2D);
 
         gl::draw_arrays(gl::GL_TRIANGLE_FAN, 0, 6);
 
@@ -186,13 +199,12 @@ fn gl_loop(context: Context) {
                 let tex = map.get(&letter.id()).unwrap();
 
 
-                // Setup texture UV data
+                // TODO: Setup texture UV data
                 // Setup vertice data
-                gl::bind_buffer(gl::GL_ARRAY_BUFFER, vertex_vbo);
-                gl::buffer_data(gl::GL_ARRAY_BUFFER, &vertices, gl::GL_STATIC_DRAW);
+                vertex_vbo.set_data(&vertices);
 
                 gl::active_texture(gl::GL_TEXTURE_2D);
-                gl::bind_texture(gl::GL_TEXTURE_2D, tex.get_raw_ptr());
+                tex.bind_texture(gl::GL_TEXTURE_2D);
 
                 gl::draw_arrays(gl::GL_TRIANGLE_FAN, 0, 6);
                 //commands.push(cmd);
@@ -213,27 +225,6 @@ fn gl_loop(context: Context) {
 
         std::thread::sleep(std::time::Duration::new(1, 0));
     }
-}
-
-
-fn init_triangle() -> (gl::GLuint, gl::GLuint) {
-    // generate a buffer to hold the vertices and UVs
-    let vbos = gl::gen_buffers(2);
-
-    // texture UVs
-    let uv : [f32; 12] = [
-        0.0, 0.0,
-        0.0,  1.0,
-        1.0,  1.0,
-        0.0,  1.0,
-        1.0, 0.0,
-        1.0,  1.0,
-    ];
-
-    gl::bind_buffer(gl::GL_ARRAY_BUFFER, vbos[1]);
-    gl::buffer_data(gl::GL_ARRAY_BUFFER, &uv, gl::GL_STATIC_DRAW);
-
-    (vbos[0], vbos[1])
 }
 
 fn main() {

@@ -13,8 +13,20 @@ pub struct GlTexture {
 }
 
 impl GlTexture {
-    pub fn get_raw_ptr(&self) -> gl::GLuint {
-        return self.ptr;
+    /// Binds this OpenGL texture. This struct must
+    /// remain in scope for the entire duration of usage.
+    pub fn bind_texture(&self, target : gl::GLenum) {
+        gl::bind_texture(target, self.ptr)
+    }
+
+    /// Returns the width of this texture.
+    pub fn get_width(&self) -> usize {
+        self.width
+    }
+
+    /// Returns the height of this texture.
+    pub fn get_height(&self) -> usize {
+        self.height
     }
 
     /// Converts a RGBA byte array to a OpenGL reference.
