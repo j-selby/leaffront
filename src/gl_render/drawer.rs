@@ -131,6 +131,11 @@ impl Drawer {
         }
     }
 
+    /// Waits for vertical sync.
+    pub fn vsync(&self) {
+        self.context.wait_for_vsync();
+    }
+
     /// Enables blending of alpha textures. Disabled at end of frame.
     pub fn enable_blending(&self) {
         gl::enable(gl::GL_BLEND);

@@ -2,6 +2,8 @@
 
 // Code from https://github.com/seankerr/rust-rpi-examples
 
+use libc::{ c_void };
+
 use egl;
 use egl::{EGLConfig, EGLContext, EGLDisplay, EGLNativeDisplayType, EGLSurface};
 
@@ -15,6 +17,11 @@ use videocore::bcm_host::GraphicsDisplaySize;
 
 use std::ptr;
 
+use std::sync::mpsc::{Sender, Receiver};
+use std::sync::mpsc;
+
+use std::mem::transmute;
+
 pub struct Context {
     pub config:  EGLConfig,
     pub context: EGLContext,
@@ -27,14 +34,42 @@ pub struct Context {
     element : ElementHandle
 }
 
+extern "C" fn callback(handle: UpdateHandle, ptr : *mut c_void) {
+    let tx : *const Sender<UpdateHandle> = unsafe { transmute(ptr) };
+    let tx : &Sender<UpdateHandle> = unsafe { tx.as_ref().unwrap() };
+    match tx.send(handle) {
+        Ok(_) => {},
+        Err(err) => {
+            println!("callback err: {}", err);
+        },
+    }
+
+}
+
+extern "C" fn null_callback(_: UpdateHandle, _ : *mut c_void) {}
+
 impl Context {
     /// Returns the screen resolution of the device.
     pub fn get_resolution() -> GraphicsDisplaySize {
         bcm_host::graphics_get_display_size(0).unwrap()
     }
 
+    /// Swaps GPU buffers.
     pub fn swap_buffers(&self) -> bool {
         egl::swap_buffers(self.display, self.surface)
+    }
+
+    /// Waits for a vsync event from H/W.
+    pub fn wait_for_vsync(&self) {
+        let (tx, rx): (Sender<UpdateHandle>, Receiver<UpdateHandle>) = mpsc::channel();
+
+        dispmanx::vsync_callback(self.dispman_display, callback,
+                                 unsafe { transmute(&tx as *const Sender<UpdateHandle>) } );
+
+        let _ : UpdateHandle = rx.recv().unwrap();
+
+        dispmanx::vsync_callback(self.dispman_display, null_callback,
+                                 unsafe { transmute(&tx as *const Sender<UpdateHandle>) } );
     }
 
     pub fn build() -> Result<Self, String> {
