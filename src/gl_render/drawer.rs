@@ -78,20 +78,49 @@ impl Drawer {
 
     /// Creates a new drawer.
     pub fn new() -> Self {
+        let vertex_vbo = GLVBO::new();
+        let color_vbo = GLVBO::new();
+        let uv_vbo = GLVBO::new();
+
         let colored_shader = GLSLShader::create_shader(
             include_bytes!("../../res/shaders/color.vert"),
             include_bytes!("../../res/shaders/color.frag")).unwrap();
+
+        let input_vertex = colored_shader.get_attribute("input_vertex");
+        let input_color = colored_shader.get_attribute("input_color");
+
+        // TODO: Check that these bindings persist
+        vertex_vbo.bind();
+        gl::vertex_attrib_pointer_offset(input_vertex as gl::GLuint, 2,
+                                         gl::GL_FLOAT, false, 0, 0);
+        color_vbo.bind();
+        gl::vertex_attrib_pointer_offset(input_color as gl::GLuint, 4,
+                                         gl::GL_FLOAT, false, 0, 0);
+
         let textured_shader = GLSLShader::create_shader(
             include_bytes!("../../res/shaders/tex.vert"),
             include_bytes!("../../res/shaders/tex.frag")).unwrap();
+
+        // TODO: Check that these bindings persist
+        textured_shader.use_program();
+        let input_uv = textured_shader.get_attribute("input_uv");
+        let input_vertex = textured_shader.get_attribute("input_vertex");
+
+        uv_vbo.bind();
+        gl::vertex_attrib_pointer_offset(input_uv as gl::GLuint, 2,
+                                         gl::GL_FLOAT, false, 0, 0);
+
+        vertex_vbo.bind();
+        gl::vertex_attrib_pointer_offset(input_vertex as gl::GLuint, 2,
+                                         gl::GL_FLOAT, false, 0, 0);
 
         Drawer {
             state    : DrawState::None,
             colored  : colored_shader,
             textured : textured_shader,
-            vertex   : GLVBO::new(),
-            color    : GLVBO::new(),
-            uv       : GLVBO::new()
+            vertex   : vertex_vbo,
+            color    : color_vbo,
+            uv       : uv_vbo
         }
     }
 }
