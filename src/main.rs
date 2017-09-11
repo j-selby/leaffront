@@ -124,7 +124,8 @@ fn gl_loop(context: Context) {
 
         drawer.end();
 
-        //std::thread::sleep(std::time::Duration::new(1, 0));
+        // TODO: Vsync
+        std::thread::sleep(std::time::Duration::new(0, 16000000));
     }
 }
 
