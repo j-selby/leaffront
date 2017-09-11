@@ -12,6 +12,8 @@ use gl_render::texture::GlTexture;
 use gl_render::pos::Position;
 use gl_render::pos::Rect;
 
+use color::Color;
+
 #[derive(Ord, PartialOrd, Eq, PartialEq)]
 enum DrawState {
     None,
@@ -43,20 +45,76 @@ impl Drawer {
     /// Changes shaders, and ensures that GLES is ready to use it.
     fn configure_state(&mut self, target : DrawState) {
         if self.state != target {
+            // TODO: Unbind previous state, if needed
+            // (disable_vertex_attrib_array)
+
             match target {
                 DrawState::None => {
                     panic!("Unable to use no draw state!")
                 }
                 DrawState::Colored => {
                     self.colored.use_program();
+
+                    // TODO: Cache these
+                    let input_vertex = self.colored.get_attribute("input_vertex");
+                    let input_color = self.colored.get_attribute("input_color");
+
+                    gl::enable_vertex_attrib_array(input_color as gl::GLuint);
+                    gl::enable_vertex_attrib_array(input_vertex as gl::GLuint);
+
+                    // TODO: Check that these bindings persist
+                    self.vertex.bind();
+                    gl::vertex_attrib_pointer_offset(input_vertex as gl::GLuint, 2,
+                                                     gl::GL_FLOAT, false, 0, 0);
+                    self.color.bind();
+                    gl::vertex_attrib_pointer_offset(input_color as gl::GLuint, 4,
+                                                     gl::GL_FLOAT, false, 0, 0);
                 },
                 DrawState::Textured => {
                     self.textured.use_program();
+
+                    // TODO: Cache these
+                    let input_uv = self.textured.get_attribute("input_uv");
+                    let input_vertex = self.textured.get_attribute("input_vertex");
+
+                    gl::enable_vertex_attrib_array(input_uv as gl::GLuint);
+                    gl::enable_vertex_attrib_array(input_vertex as gl::GLuint);
+
+                    // TODO: Use color in textured shader
+
+                    self.uv.bind();
+                    gl::vertex_attrib_pointer_offset(input_uv as gl::GLuint, 2,
+                                                     gl::GL_FLOAT, false, 0, 0);
+
+                    self.vertex.bind();
+                    gl::vertex_attrib_pointer_offset(input_vertex as gl::GLuint, 2,
+                                                     gl::GL_FLOAT, false, 0, 0);
                 },
             }
 
             self.state = target;
         }
+    }
+
+    fn rect_to_vertices(&self, rect : &Rect) -> [f32; 12] {
+        // Translate to OpenGL coordinates
+        let min_x = (rect.x as f32) / self.size.width as f32 * 2.0 - 1.0;
+        let max_x = ((rect.x + rect.width) as f32) / self.size.width as f32 * 2.0 - 1.0;
+        let min_y = (rect.y as f32) / self.size.height as f32 * 2.0 - 1.0;
+        let max_y = ((rect.y + rect.height) as f32) / self.size.height as f32 * 2.0 - 1.0;
+
+        // Generate vertex data
+        // Inverted due to OpenGL perspective
+        [
+            // Vertex 1
+            min_x, -min_y,
+            min_x, -max_y,
+            max_x, -max_y,
+            // Vertex 2
+            min_x, -max_y,
+            max_x, -min_y,
+            max_x, -max_y,
+        ]
     }
 
     /// Starts this frame.
@@ -114,37 +172,44 @@ impl Drawer {
 
     /// Draws a texture to the screen, with the specified x/y coordinates (relative to screen size),
     ///  and a specified width/height.
-    pub fn draw_texture_sized(&mut self, texture : &GlTexture, rect : Rect) {
-        // Translate to OpenGL coordinates
-        let min_x = (rect.x as f32) / self.size.width as f32 * 2.0 - 1.0;
-        let max_x = ((rect.x + rect.width) as f32) / self.size.width as f32 * 2.0 - 1.0;
-        let min_y = (rect.y as f32) / self.size.height as f32 * 2.0 - 1.0;
-        let max_y = ((rect.y + rect.height) as f32) / self.size.height as f32 * 2.0 - 1.0;
-
-        // Generate vertex data
-        // Inverted due to OpenGL perspective
-        let vertices = [
-            // Vertex 1
-            min_x, -min_y,
-            min_x, -max_y,
-            max_x, -max_y,
-            // Vertex 2
-            min_x, -max_y,
-            max_x, -min_y,
-            max_x, -max_y,
-        ];
-
+    pub fn draw_texture_sized(&mut self, texture : &GlTexture, rect : &Rect) {
+        let vertices = self.rect_to_vertices(rect);
         self.draw_textured_vertices(texture, &vertices)
     }
 
     /// Draws a texture to the screen, with the specified x/y coordinates (relative to screen size),
     /// and the texture dimensions as width/height.
-    pub fn draw_texture(&mut self, texture : &GlTexture, pos : Position) {
+    pub fn draw_texture(&mut self, texture : &GlTexture, pos : &Position) {
         let width = texture.get_width();
         let height = texture.get_height();
 
-        self.draw_texture_sized(texture, Rect::new_from_pos(pos,
+        self.draw_texture_sized(texture, &Rect::new_from_pos(pos,
                                                             width as i32, height as i32))
+    }
+
+    /// Draws a set of colored vertices to the screen, with a specified color array.
+    pub fn draw_colored_vertices(&mut self, vertices : &[f32], colors : &[f32]) {
+        self.configure_state(DrawState::Colored);
+
+        self.vertex.set_data(vertices);
+        self.color.set_data(colors);
+
+        gl::draw_arrays(gl::GL_TRIANGLE_FAN, 0, (vertices.len() / 2) as gl::GLsizei);
+    }
+
+    /// Draws a colored rectangle to the screen, with a single color.
+    pub fn draw_colored_rect(&mut self, rect : &Rect, color : &Color) {
+        let vertices : [f32; 12] = self.rect_to_vertices(&rect);
+        let mut colors : [f32; 24] = [0.0; 24];
+
+        for i in 0 .. 24 / 4 {
+            colors[i * 4] = color.r as f32 / 255.0;
+            colors[i * 4 + 1] = color.g as f32 / 255.0;
+            colors[i * 4 + 2] = color.b as f32 / 255.0;
+            colors[i * 4 + 3] = color.a as f32 / 255.0;
+        }
+
+        self.draw_colored_vertices(&vertices, &colors)
     }
 
     /// Returns the width of the screen.
@@ -171,42 +236,9 @@ impl Drawer {
             include_bytes!("../../res/shaders/color.vert"),
             include_bytes!("../../res/shaders/color.frag")).unwrap();
 
-        colored_shader.use_program();
-
-        let input_vertex = colored_shader.get_attribute("input_vertex");
-        let input_color = colored_shader.get_attribute("input_color");
-
-        gl::enable_vertex_attrib_array(input_color as gl::GLuint);
-        gl::enable_vertex_attrib_array(input_vertex as gl::GLuint);
-
-        // TODO: Check that these bindings persist
-        vertex_vbo.bind();
-        gl::vertex_attrib_pointer_offset(input_vertex as gl::GLuint, 2,
-                                         gl::GL_FLOAT, false, 0, 0);
-        color_vbo.bind();
-        gl::vertex_attrib_pointer_offset(input_color as gl::GLuint, 4,
-                                         gl::GL_FLOAT, false, 0, 0);
-
         let textured_shader = GLSLShader::create_shader(
             include_bytes!("../../res/shaders/tex.vert"),
             include_bytes!("../../res/shaders/tex.frag")).unwrap();
-
-        // TODO: Check that these bindings persist
-        textured_shader.use_program();
-
-        let input_uv = textured_shader.get_attribute("input_uv");
-        let input_vertex = textured_shader.get_attribute("input_vertex");
-
-        gl::enable_vertex_attrib_array(input_uv as gl::GLuint);
-        gl::enable_vertex_attrib_array(input_vertex as gl::GLuint);
-
-        uv_vbo.bind();
-        gl::vertex_attrib_pointer_offset(input_uv as gl::GLuint, 2,
-                                         gl::GL_FLOAT, false, 0, 0);
-
-        vertex_vbo.bind();
-        gl::vertex_attrib_pointer_offset(input_vertex as gl::GLuint, 2,
-                                         gl::GL_FLOAT, false, 0, 0);
 
         Drawer {
             context,
