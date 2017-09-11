@@ -10,6 +10,7 @@ use gl_render::shader::GLSLShader;
 use gl_render::vbo::GLVBO;
 use gl_render::texture::GlTexture;
 use gl_render::pos::Position;
+use gl_render::pos::Rect;
 
 #[derive(Ord, PartialOrd, Eq, PartialEq)]
 enum DrawState {
@@ -113,13 +114,12 @@ impl Drawer {
 
     /// Draws a texture to the screen, with the specified x/y coordinates (relative to screen size),
     ///  and a specified width/height.
-    pub fn draw_texture_sized(&mut self, texture : &GlTexture, pos : Position,
-                              width : i32, height : i32) {
+    pub fn draw_texture_sized(&mut self, texture : &GlTexture, rect : Rect) {
         // Translate to OpenGL coordinates
-        let min_x = (pos.x as f32) / self.size.width as f32 * 2.0 - 1.0;
-        let max_x = ((pos.x + width) as f32) / self.size.width as f32 * 2.0 - 1.0;
-        let min_y = (pos.y as f32) / self.size.height as f32 * 2.0 - 1.0;
-        let max_y = ((pos.y + height) as f32) / self.size.height as f32 * 2.0 - 1.0;
+        let min_x = (rect.x as f32) / self.size.width as f32 * 2.0 - 1.0;
+        let max_x = ((rect.x + rect.width) as f32) / self.size.width as f32 * 2.0 - 1.0;
+        let min_y = (rect.y as f32) / self.size.height as f32 * 2.0 - 1.0;
+        let max_y = ((rect.y + rect.height) as f32) / self.size.height as f32 * 2.0 - 1.0;
 
         // Generate vertex data
         // Inverted due to OpenGL perspective
@@ -143,7 +143,8 @@ impl Drawer {
         let width = texture.get_width();
         let height = texture.get_height();
 
-        self.draw_texture_sized(texture, pos, width as i32, height as i32)
+        self.draw_texture_sized(texture, Rect::new_from_pos(pos,
+                                                            width as i32, height as i32))
     }
 
     /// Returns the width of the screen.

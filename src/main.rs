@@ -23,6 +23,7 @@ use texture::Texture;
 use gl_render::texture::GlTexture;
 use gl_render::drawer::Drawer;
 use gl_render::pos::Position;
+use gl_render::pos::Rect;
 
 use pi::gl_context::Context;
 
@@ -81,8 +82,7 @@ fn gl_loop(context: Context) {
         let screen_width = drawer.get_width() as i32;
         let screen_height = drawer.get_height() as i32;
 
-        drawer.draw_texture_sized(&bg_cmd.tex_ptr, Position::new(0, 0),
-                                  screen_width, screen_height);
+        drawer.draw_texture_sized(&bg_cmd.tex_ptr, Rect::new(0, 0, screen_width, screen_height));
 
         {
             let time = Local::now();
