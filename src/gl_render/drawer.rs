@@ -9,6 +9,7 @@ use pi::gl_context::Context;
 use gl_render::shader::GLSLShader;
 use gl_render::vbo::GLVBO;
 use gl_render::texture::GlTexture;
+use gl_render::pos::Position;
 
 #[derive(Ord, PartialOrd, Eq, PartialEq)]
 enum DrawState {
@@ -58,6 +59,7 @@ impl Drawer {
     }
 
     pub fn start(&mut self) {
+        self.size = Context::get_resolution();
         self.state = DrawState::None;
 
         gl::clear_color(0.0, 1.0, 0.0, 1.0);
@@ -106,6 +108,42 @@ impl Drawer {
             1.0, 1.0
         ])
     }
+
+    /// Draws a texture to the screen, with the specified x/y coordinates (relative to screen size),
+    ///  and a specified width/height.
+    pub fn draw_texture_sized(&mut self, texture : &GlTexture, pos : Position,
+                              width : i32, height : i32) {
+        // Translate to OpenGL coordinates
+        let min_x = (pos.x as f32) / self.size.width as f32 * 2.0 - 1.0;
+        let max_x = ((pos.x + width) as f32) / self.size.width as f32 * 2.0 - 1.0;
+        let min_y = (pos.y as f32) / self.size.height as f32 * 2.0 - 1.0;
+        let max_y = ((pos.y + height) as f32) / self.size.height as f32 * 2.0 - 1.0;
+
+        // Generate vertex data
+        // Inverted due to OpenGL perspective
+        let vertices = [
+            // Vertex 1
+            min_x, -min_y,
+            min_x, -max_y,
+            max_x, -max_y,
+            // Vertex 2
+            min_x, -max_y,
+            max_x, -min_y,
+            max_x, -max_y,
+        ];
+
+        self.draw_textured_vertices(texture, &vertices)
+    }
+
+    /// Draws a texture to the screen, with the specified x/y coordinates (relative to screen size),
+    /// and the texture dimensions as width/height.
+    pub fn draw_texture(&mut self, texture : &GlTexture, pos : Position) {
+        let width = texture.get_width();
+        let height = texture.get_height();
+
+        self.draw_texture_sized(texture, pos, width as i32, height as i32)
+    }
+
 
     /// Creates a new drawer.
     pub fn new(context : Context) -> Self {

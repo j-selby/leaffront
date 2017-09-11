@@ -22,6 +22,7 @@ use texture::Texture;
 
 use gl_render::texture::GlTexture;
 use gl_render::drawer::Drawer;
+use gl_render::pos::Position;
 
 use pi::gl_context::Context;
 
@@ -117,31 +118,12 @@ fn gl_loop(context: Context) {
                     map.insert(letter.id(), opengl_tex);
                 }
 
-                // Size the texture for a OpenGL environment
-                let min_x = (bounding_box.min.x as f32) / dimensions.width as f32 * 2.0 - 1.0;
-                let max_x = (bounding_box.max.x as f32) / dimensions.width as f32 * 2.0 - 1.0;
-                let min_y = (bounding_box.min.y as f32) / dimensions.height as f32 * 2.0 - 1.0;
-                let max_y = (bounding_box.max.y as f32) / dimensions.height as f32 * 2.0 - 1.0;
-
-                // Generate vertex data
-                let vertices = [
-                    // Vertex 1
-                    min_x, -min_y,
-                    min_x, -max_y,
-                    max_x, -max_y,
-                    // Vertex 2
-                    min_x, -max_y,
-                    max_x, -min_y,
-                    max_x, -max_y,
-                ];
-
-                //println!("Vertices: {:?}", vertices);
                 //println!("Allocated texture of size: {} {}", tex.get_width(), tex.get_height());
 
                 let tex = map.get(&letter.id()).unwrap();
 
                 // Setup vertice data
-                drawer.draw_textured_vertices(tex, &vertices);
+                drawer.draw_texture(tex, Position::new(bounding_box.min.x as i32, bounding_box.min.y as i32));
             }
         }
 
