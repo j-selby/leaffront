@@ -1,6 +1,6 @@
 /// Represents a unsigned OpenGL color in Rust form.
 
-#[derive(Clone)]
+#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub struct Color {
     pub r : u8,
     pub g : u8,
