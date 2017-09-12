@@ -14,5 +14,7 @@ rusttype = "0.2.1"
 image = "0.15.0"
 
 chrono = "0.4.0"
+ftp = "2.2.1"
+xmltree = "0.4.0"
 
 libc = "0.1"
