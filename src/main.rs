@@ -8,6 +8,7 @@ extern crate rusttype;
 extern crate chrono;
 extern crate ftp;
 extern crate xmltree;
+extern crate rand;
 
 extern crate fps_counter;
 
@@ -34,18 +35,24 @@ use gl_render::pos::Rect;
 use gl_render::font::FontCache;
 
 use pi::gl_context::Context;
+use pi::brightness::set_brightness;
 
 use image::load_from_memory;
 
 use chrono::Local;
 use chrono::Datelike;
 
+use rand::Rng;
+use rand::thread_rng;
+
 fn gl_loop(context: Context) {
     // Create our mechanism for rendering
     let mut drawer = Drawer::new(context);
 
     // TODO: Check startup time
-    let mut state = ScreenState::Day(Message::Date);
+    let mut state = ScreenState::Night;//ScreenState::Day(Message::Date);
+    set_brightness(state.get_brightness()).unwrap();
+
     let mut state_countdown : u32 = 0;
 
     let bg_image = load_from_memory(include_bytes!("../res/bg.jpg")).unwrap();
@@ -60,6 +67,10 @@ fn gl_loop(context: Context) {
     // TODO: Manually resize background to correct resolution ourselves
 
     let mut weather_manager = Manager::new(20 * 60 * 1000);
+
+    let mut rng = thread_rng();
+    let mut night_x = -1;
+    let mut night_y = -1;
 
     loop {
         let next_state = match &state {
@@ -80,6 +91,7 @@ fn gl_loop(context: Context) {
         match next_state {
             Some(next) => {
                 state = next;
+                set_brightness(state.get_brightness()).unwrap();
             }
             None => {}
         }
@@ -138,6 +150,51 @@ fn gl_loop(context: Context) {
                           20, &Position::new(20, 50), &mut drawer);
             },
             &ScreenState::Night => {
+                // Render out both the top and bottom strings, and center them.
+                let datetime = Local::now();
+                let top_msg = datetime.format("%-I:%M:%S %P").to_string();
+                let top_length = font.get_width(&top_msg, 50);
+                let top_two = top_length / 2;
+
+                let suffix = match datetime.day() {
+                    1 | 21 | 31 => "st",
+                    2 | 22 => "nd",
+                    3 | 23 => "rd",
+                    _ => "th",
+                };
+
+                let bottom_msg = format!("{}{} of {}", datetime.format("%A, %-d").to_string(), suffix,
+                                  datetime.format("%B").to_string());
+                let bottom_length = font.get_width(&bottom_msg, 50);
+                let bottom_two = bottom_length / 2;
+
+                state_countdown += 1;
+                if state_countdown > 60 * 5 || night_x == -1 {
+                    state_countdown = 0;
+
+                    // Set new random position
+                    // Calculate maximum ranges
+                    let max_width = if top_two > bottom_two { top_two } else { bottom_two };
+                    let max_x = screen_width - max_width;
+                    let min_x = max_width;
+
+                    let min_y = 50; // For font
+                    let max_y = screen_height - 50 * 3; // For font + gap
+
+                    night_x = rng.gen_range(min_x, max_x);
+                    night_y = rng.gen_range(min_y, max_y);
+
+                }
+
+                let top_x = night_x - top_two;
+                let bottom_x = night_x - bottom_two;
+
+                drawer.enable_blending();
+
+                font.draw(&top_msg,  &Color::new_3byte(255, 255, 255),
+                          50, &Position::new(top_x, night_y), &mut drawer);
+                font.draw(&bottom_msg,  &Color::new_3byte(255, 255, 255),
+                          50, &Position::new(bottom_x, night_y + 50), &mut drawer);
             }
         }
 
