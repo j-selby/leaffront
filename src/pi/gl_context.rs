@@ -197,8 +197,8 @@ impl Context {
             return Err("Failed to make EGL current context".into());
         }
 
-        // remove the vsync/swap interval
-        egl::swap_interval(egl_display, 0);
+        // add a vsync/swap interval
+        egl::swap_interval(egl_display, 1);
 
         Ok(Self {
             config: egl_config,
