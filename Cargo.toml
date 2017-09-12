@@ -16,5 +16,6 @@ image = "0.15.0"
 chrono = "0.4.0"
 ftp = "2.2.1"
 xmltree = "0.4.0"
+rand = "0.3.16"
 
 libc = "0.1"

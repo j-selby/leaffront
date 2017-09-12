@@ -116,7 +116,7 @@ impl Drawer {
         self.size = Context::get_resolution();
         self.state = DrawState::None;
 
-        gl::clear_color(0.0, 1.0, 0.0, 0.0);
+        gl::clear_color(0.0, 0.0, 0.0, 0.0);
         gl::clear(gl::GL_COLOR_BUFFER_BIT);
     }
 

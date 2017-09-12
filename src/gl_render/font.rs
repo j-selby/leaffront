@@ -29,6 +29,28 @@ pub struct FontCache<'a> {
 }
 
 impl<'a> FontCache<'a> {
+    /// Returns the width of a specified string.
+    pub fn get_width(&self, text : &str, size : i32) -> i32 {
+        let layout = self.font.layout(text, Scale::uniform(size as f32),
+                                      Point { x : 0.0, y : 0.0 });
+
+        let mut width = 0;
+        for char in layout {
+            let bb = char.pixel_bounding_box();
+            match bb {
+                Some(bb) => {
+                    let pos = char.position().x as i32 + bb.width();
+                    if pos > width {
+                        width = pos;
+                    }
+                },
+                None => {},
+            }
+        }
+
+        width
+    }
+
     /// Draws the specified string to the screen.
     pub fn draw(&mut self, text : &str, color : &Color, size : i32, pos : &Position,
                 draw : &mut Drawer) {
