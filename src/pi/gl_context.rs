@@ -10,8 +10,9 @@ use egl::{EGLConfig, EGLContext, EGLDisplay, EGLNativeDisplayType, EGLSurface};
 use videocore::bcm_host;
 use videocore::dispmanx;
 use videocore::dispmanx::{FlagsAlpha, Transform, VCAlpha, Window, DisplayHandle, UpdateHandle,
-                            ElementHandle};
+                            ElementHandle, ResourceHandle};
 use videocore::image::Rect;
+use videocore::image::ImageType;
 
 use videocore::bcm_host::GraphicsDisplaySize;
 
@@ -29,9 +30,12 @@ pub struct Context {
     pub surface: EGLSurface,
 
     window : Box<Window>,
-    dispman_display : DisplayHandle,
-    update : UpdateHandle,
-    element : ElementHandle
+    pub dispman_display : DisplayHandle,
+    pub update : UpdateHandle,
+    element : ElementHandle,
+
+    pub bg_resource : ResourceHandle,
+    pub bg_element : ElementHandle
 }
 
 extern "C" fn callback(handle: UpdateHandle, ptr : *mut c_void) {
@@ -104,20 +108,63 @@ impl Context {
         let mut src_rect = Rect {
             x: 0,
             y: 0,
-            width: 0,
-            height: 0
+            width: (dimensions.width as i32) << 16,
+            height: (dimensions.height as i32) << 16
         };
 
-        // draw opengl context on a clean background (cleared by the clear color)
+        /*let mut alpha = VCAlpha {
+            flags: FlagsAlpha::FIXED_ALL_PIXELS,
+            opacity: 255,
+            mask: 0
+        };*/
+        //let flag1: u32 = unsafe { ::std::mem::transmute(FlagsAlpha::FROM_SOURCE) };
+        //let flag2: u32 = unsafe { ::std::mem::transmute(FlagsAlpha::FIXED_ALL_PIXELS) };
+
         let mut alpha = VCAlpha {
             flags: FlagsAlpha::FIXED_ALL_PIXELS,
             opacity: 255,
             mask: 0
         };
 
+        // Create a resource for drawing onto
+        let mut ptr = 0;
+        let bg_resource = dispmanx::resource_create(ImageType::RGB888,
+                                                    dimensions.width as u32,
+                                                    dimensions.height as u32,
+                                                    &mut ptr);
+
+        println!("e1");
+        // Create a element to hold the background
+        let bg_element = dispmanx::element_add(update, display,
+                                            1, // layer upon which to draw
+                                            &mut dest_rect,
+                                               bg_resource,
+                                            &mut src_rect,
+                                            dispmanx::DISPMANX_PROTECTION_NONE,
+                                            &mut alpha,
+                                            ptr::null_mut(),
+                                            Transform::NO_ROTATE);
+
+        // draw opengl context on a clean background (cleared by the clear color)
+        // TODO: Make this transparent
+        let mut alpha = VCAlpha {
+            flags: FlagsAlpha::FROM_SOURCE,
+            opacity: 128,
+            mask: 0
+        };
+
+        // setup the source rectangle where opengl will be drawing
+        let mut src_rect = Rect {
+            x: 0,
+            y: 0,
+            width: 0,
+            height: 0
+        };
+
+        println!("e2");
         // create our dispmanx element upon which we'll draw opengl using EGL
         let element = dispmanx::element_add(update, display,
-                                  3, // layer upon which to draw
+                                  2, // layer upon which to draw
                                   &mut dest_rect,
                                   0,
                                   &mut src_rect,
@@ -126,8 +173,10 @@ impl Context {
                                   ptr::null_mut(),
                                   Transform::NO_ROTATE);
 
+        println!("Enter sync");
         // submit changes
         dispmanx::update_submit_sync(update);
+        println!("sync done");
 
         // create window to hold element, width, height
         let mut window = Box::new( Window {
@@ -209,7 +258,10 @@ impl Context {
             window,
             dispman_display : display,
             update,
-            element
+            element,
+
+            bg_resource,
+            bg_element
         })
     }
 }
@@ -222,6 +274,7 @@ impl Drop for Context {
         egl::terminate(self.display);
 
         dispmanx::element_remove(self.update, self.element);
+        dispmanx::element_remove(self.update, self.bg_element);
 
         dispmanx::update_submit_sync(self.update);
         // "Update" cannot be deleted?

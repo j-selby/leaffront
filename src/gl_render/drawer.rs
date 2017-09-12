@@ -115,9 +115,6 @@ impl Drawer {
     pub fn start(&mut self) {
         self.size = Context::get_resolution();
         self.state = DrawState::None;
-
-        gl::clear_color(0.0, 0.0, 0.0, 0.0);
-        gl::clear(gl::GL_COLOR_BUFFER_BIT);
     }
 
     /// Ends this frame.
@@ -137,6 +134,16 @@ impl Drawer {
     /// Waits for vertical sync.
     pub fn vsync(&self) {
         self.context.wait_for_vsync();
+    }
+
+    /// Clears the framebuffer.
+    pub fn clear(&self, transparent : bool) {
+        if transparent {
+            gl::clear_color(0.0, 0.0, 0.0, 0.0);
+        } else {
+            gl::clear_color(0.0, 0.0, 0.0, 1.0);
+        }
+        gl::clear(gl::GL_COLOR_BUFFER_BIT);
     }
 
     /// Enables blending of alpha textures. Disabled at end of frame.
