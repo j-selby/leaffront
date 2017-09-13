@@ -19,3 +19,5 @@ xmltree = "0.4.0"
 rand = "0.3.16"
 
 libc = "0.1"
+
+ctrlc = "3.0"
