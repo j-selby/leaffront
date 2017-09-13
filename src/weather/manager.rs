@@ -5,7 +5,7 @@ use weather::Weather;
 use weather::WeatherProvider;
 use weather::bom::BOM;
 
-use std::sync::mpsc::{Sender, Receiver, TryRecvError};
+use std::sync::mpsc::{Sender, Receiver};
 use std::sync::mpsc;
 
 use std::thread;
@@ -20,20 +20,11 @@ pub struct WeatherManager {
 impl WeatherManager {
     /// Gets the latest weather information.
     pub fn get(&mut self) -> Result<Weather, String> {
-        let result = self.input.try_recv();
-        let data = match result {
-            Ok(result) => {
-                self.current = Some(result);
-                self.current.clone()
-            },
-            Err(TryRecvError::Empty) => {
-                self.current.clone()
-            },
-            Err(TryRecvError::Disconnected) => {
-                println!("Disconnected?");
-                self.current.clone()
-            }
-        };
+        for result in self.input.try_iter() {
+            self.current = Some(result);
+        }
+
+        let data = self.current.clone();
 
         match data {
             Some(weather) => {
