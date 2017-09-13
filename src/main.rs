@@ -8,6 +8,8 @@ extern crate serde_derive;
 extern crate serde;
 extern crate toml;
 
+extern crate clap;
+
 extern crate image;
 extern crate rusttype;
 
@@ -46,6 +48,8 @@ use gl_render::font::FontCache;
 
 use pi::gl_context::Context;
 use pi::brightness::set_brightness;
+
+use clap::{Arg, App};
 
 use chrono::Local;
 use chrono::Datelike;
@@ -331,9 +335,29 @@ fn main_loop(config : LeaffrontConfig, context: Context) {
 }
 
 fn main() {
+    let matches = App::new("Leaffront")
+        .version(VERSION)
+        .author("Selby (https://github.com/j-selby)")
+        .about("A simple photoframe for the Raspberry Pi")
+        .long_about("Leaffront uses DispmanX + OpenGL to provide a simple slideshow, \
+                            along with basic clock, date and weather information. \
+                            Most values can be configured, and is lightweight enough that other \
+                            applications can be run alongside to enhance the experience.")
+        .arg(Arg::with_name("config")
+            .short("c")
+            .long("config")
+            .help("Provide a custom configuration file")
+            .default_value("config.toml")
+            .value_name("FILE")
+            .required(false)
+            .takes_value(true))
+        .get_matches();
+
+    let config_file = matches.value_of("config").unwrap_or("config.toml");
+
     println!("Leaffront {}", VERSION);
 
-    let config = config::load_config("config.toml".into());
+    let config = config::load_config(config_file.into());
 
     let context = Context::build().unwrap();
 

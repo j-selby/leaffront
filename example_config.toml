@@ -1,0 +1,19 @@
+art_dir = "art"
+refresh_rate = 500
+
+[sleep]
+sleep_hour = 22
+wakeup_hour = 7
+
+[day]
+background_secs = 30
+subtitle_secs = 8
+brightness = 100
+
+[night]
+move_secs = 10
+night_tap_cooldown = 5
+brightness = 12
+
+[weather]
+update_freq = 20
