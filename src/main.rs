@@ -1,6 +1,7 @@
 extern crate egl;
 extern crate opengles;
 extern crate videocore;
+extern crate evdev;
 
 extern crate image;
 extern crate rusttype;
@@ -49,25 +50,78 @@ use image::GenericImage;
 
 use chrono::Local;
 use chrono::Datelike;
+use chrono::naive::NaiveTime;
+use chrono::Duration as cDuration;
 
 use rand::Rng;
 use rand::thread_rng;
 
 use std::thread;
 use std::time::Duration;
+use std::time::Instant;
+
+fn check_night(start_night : u32, end_night : u32) -> bool {
+    let time = Local::now();
+    let start_time = NaiveTime::from_hms(start_night, 0, 0);
+    let end_time = NaiveTime::from_hms(end_night, 0, 0);
+
+    let start_date = time.date().naive_local().and_time(start_time);
+
+    let end_date = if start_time > end_time {
+        // End night is on the next day
+        let end_date = time.date().naive_local();
+        let end_date = end_date + cDuration::days(1);
+        end_date.and_time(end_time)
+    } else {
+        time.date().naive_local().and_time(end_time)
+    };
+
+    let cur_date = time.naive_local();
+
+    println!("Start time: {}", start_date);
+    println!("End time: {}", end_date);
+
+    cur_date > start_date && cur_date < end_date
+}
 
 fn gl_loop(context: Context) {
+    // TODO: Move to config file
+    let start_night = 12;//22;
+    let end_night = 7;
+
     // Create our mechanism for rendering
     let mut drawer = Drawer::new(context);
 
     println!("Drawer go!");
 
-    // TODO: Check startup time
-    let mut state = ScreenState::Day(Message::Date);
+    // Startup input handling
+    let mut devices = evdev::enumerate();
+
+    for device in &devices {
+        println!("{}", device);
+    }
+
+    let mut check_input = || -> Vec<evdev::raw::input_event> {
+        let mut input = Vec::new();
+        for mut device  in &mut devices {
+            for evt in  device.events_no_sync().unwrap() {
+                input.push(evt);
+            }
+        }
+        input
+    };
+
+    // Check the startup time
+    let mut state = if check_night(start_night, end_night) {
+        ScreenState::Night
+    } else {
+        ScreenState::Day(Message::Date)
+    };
+
     set_brightness(state.get_brightness()).unwrap();
 
     println!("Brightness go!");
-    let mut state_countdown : u32 = 0;
+    let mut state_countdown = Instant::now();
 
     let bg_image = load_from_memory(include_bytes!("../res/bg.jpg")).unwrap();
 
@@ -86,6 +140,7 @@ fn gl_loop(context: Context) {
     let mut rng = thread_rng();
     let mut night_x = -1;
     let mut night_y = -1;
+    let mut night_cooldown = Instant::now();
 
     // Update the background
     /*let mut dest_rect = VCRect {
@@ -100,7 +155,7 @@ fn gl_loop(context: Context) {
 
     println!("Resources write go!");
 
-    let mut dest_rect = VCRect {
+    let dest_rect = VCRect {
         x: 0,
         y: 0,
         width: bg_img.width() as i32,
@@ -154,21 +209,39 @@ fn gl_loop(context: Context) {
     }).expect("Error setting Ctrl-C handler");
 
     while running.load(Ordering::SeqCst) {
-        println!("Loop");
+        let input = check_input();
+
+        let mut touched = false;
+
+        for input in input {
+            if input._type == 3 {
+                touched = true;
+                break;
+            }
+        }
 
         let next_state = match &state {
             &ScreenState::Day(ref msg) => {
-                // TODO: Do this independently of frames
-                state_countdown += 1;
-                if state_countdown > 60 * 5 {
-                    state_countdown = 0;
+                if night_cooldown.elapsed() > Duration::from_secs(10) &&
+                    check_night(start_night, end_night) {
+                    state_countdown = Instant::now();
+                    Some(ScreenState::Night)
+                } else if state_countdown.elapsed() > Duration::from_secs(5) {
+                    state_countdown = Instant::now();
                     Some(ScreenState::Day(msg.next()))
                 } else {
                     None
                 }
             },
             &ScreenState::Night => {
-                None
+                if touched {
+                    night_cooldown = Instant::now();
+                    Some(ScreenState::Day(Message::Date))
+                } else if !check_night(start_night, end_night) {
+                    Some(ScreenState::Day(Message::Date))
+                } else {
+                    None
+                }
             }
         };
 
@@ -256,9 +329,8 @@ fn gl_loop(context: Context) {
                 let bottom_length = font.get_width(&bottom_msg, 50);
                 let bottom_two = bottom_length / 2;
 
-                state_countdown += 1;
-                if state_countdown > 60 * 5 || night_x == -1 {
-                    state_countdown = 0;
+                if state_countdown.elapsed() > Duration::from_secs(5) || night_x == -1  {
+                    state_countdown = Instant::now();
 
                     // Set new random position
                     // Calculate maximum ranges
