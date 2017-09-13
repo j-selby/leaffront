@@ -82,7 +82,7 @@ fn check_night(start_night : u32, end_night : u32) -> bool {
     cur_date > start_date && cur_date < end_date
 }
 
-fn gl_loop(config : LeaffrontConfig, context: Context) {
+fn main_loop(config : LeaffrontConfig, context: Context) {
     let start_night = config.sleep.sleep_hour;
     let end_night = config.sleep.wakeup_hour;
 
@@ -337,5 +337,5 @@ fn main() {
 
     let context = Context::build().unwrap();
 
-    gl_loop(config, context);
+    main_loop(config, context);
 }
