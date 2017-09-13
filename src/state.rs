@@ -5,17 +5,6 @@ pub enum ScreenState {
     Night
 }
 
-impl ScreenState {
-    /// Gets the brightness for a particular state.
-    pub fn get_brightness(&self) -> u8 {
-        // TODO: Use config file
-        match self {
-            &ScreenState::Day(_) => 100,
-            &ScreenState::Night  => 12
-        }
-    }
-}
-
 pub enum Message {
     Date,
     Weather

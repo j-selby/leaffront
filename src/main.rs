@@ -3,6 +3,11 @@ extern crate opengles;
 extern crate videocore;
 extern crate evdev;
 
+#[macro_use]
+extern crate serde_derive;
+extern crate serde;
+extern crate toml;
+
 extern crate image;
 extern crate rusttype;
 
@@ -20,12 +25,14 @@ use std::sync::Arc;
 mod color;
 mod texture;
 mod state;
+mod config;
 
 mod gl_render;
 mod pi;
 mod weather;
 mod background;
 
+use config::LeaffrontConfig;
 use color::Color;
 use state::ScreenState;
 use state::Message;
@@ -75,10 +82,9 @@ fn check_night(start_night : u32, end_night : u32) -> bool {
     cur_date > start_date && cur_date < end_date
 }
 
-fn gl_loop(context: Context) {
-    // TODO: Move to config file
-    let start_night = 22;
-    let end_night = 7;
+fn gl_loop(config : LeaffrontConfig, context: Context) {
+    let start_night = config.sleep.sleep_hour;
+    let end_night = config.sleep.wakeup_hour;
 
     // Create our mechanism for rendering
     let mut drawer = Drawer::new(context);
@@ -107,7 +113,11 @@ fn gl_loop(context: Context) {
         ScreenState::Day(Message::Date)
     };
 
-    set_brightness(state.get_brightness()).unwrap();
+    let brightness = match state {
+        ScreenState::Day(_) => config.day.brightness,
+        ScreenState::Night => config.night.brightness,
+    };
+    set_brightness(brightness).unwrap();
 
     let mut state_countdown = Instant::now();
 
@@ -118,7 +128,8 @@ fn gl_loop(context: Context) {
     // Enable on non-videocore platforms
     //let bg = GlTexture::from_image(&bg_image.to_rgba());
 
-    let mut weather_manager = WeatherManager::new(20 * 60 * 1000);
+    let mut weather_manager =
+        WeatherManager::new(config.weather.update_freq * 60 * 1000);
 
     let mut rng = thread_rng();
     let mut night_x = -1;
@@ -126,7 +137,7 @@ fn gl_loop(context: Context) {
     let mut night_cooldown = Instant::now();
 
     // Update the background
-    let bg_mgr = BackgroundManager::new("art".into(), drawer.context.bg_element);
+    let bg_mgr = BackgroundManager::new(config.art_dir, drawer.context.bg_element);
     let mut bg_countdown = Instant::now();
     bg_mgr.next();
 
@@ -146,7 +157,7 @@ fn gl_loop(context: Context) {
         }
     }).expect("Error setting Ctrl-C handler");
 
-    println!("Initialised successfully.");
+    println!("Initialised successfully");
 
     // TODO: Mechanism to immediately wake up loop
     while running.load(Ordering::SeqCst) {
@@ -163,17 +174,16 @@ fn gl_loop(context: Context) {
 
         let next_state = match &state {
             &ScreenState::Day(ref msg) => {
-                // TODO: Move time lengths into config
-                if bg_countdown.elapsed() > Duration::from_secs(10) {
+                if bg_countdown.elapsed() > Duration::from_secs(config.day.background_secs) {
                     bg_countdown = Instant::now();
                     bg_mgr.next();
                 }
 
-                if night_cooldown.elapsed() > Duration::from_secs(10) &&
+                if night_cooldown.elapsed() > Duration::from_secs(config.night.night_tap_cooldown) &&
                     check_night(start_night, end_night) {
                     state_countdown = Instant::now();
                     Some(ScreenState::Night)
-                } else if state_countdown.elapsed() > Duration::from_secs(5) {
+                } else if state_countdown.elapsed() > Duration::from_secs(config.day.subtitle_secs) {
                     state_countdown = Instant::now();
                     Some(ScreenState::Day(msg.next()))
                 } else {
@@ -195,7 +205,11 @@ fn gl_loop(context: Context) {
         match next_state {
             Some(next) => {
                 state = next;
-                set_brightness(state.get_brightness()).unwrap();
+                let brightness = match state {
+                    ScreenState::Day(_) => config.day.brightness,
+                    ScreenState::Night => config.night.brightness,
+                };
+                set_brightness(brightness).unwrap();
             }
             None => {}
         }
@@ -276,7 +290,8 @@ fn gl_loop(context: Context) {
                 let bottom_length = font.get_width(&bottom_msg, 50);
                 let bottom_two = bottom_length / 2;
 
-                if state_countdown.elapsed() > Duration::from_secs(5) || night_x == -1  {
+                if state_countdown.elapsed() > Duration::from_secs(config.night.move_secs)
+                    || night_x == -1  {
                     state_countdown = Instant::now();
 
                     // Set new random position
@@ -308,7 +323,7 @@ fn gl_loop(context: Context) {
 
 
         drawer.end();
-        thread::sleep(Duration::from_millis(1000));
+        thread::sleep(Duration::from_millis(config.refresh_rate));
         //drawer.vsync();
     }
 
@@ -318,7 +333,9 @@ fn gl_loop(context: Context) {
 fn main() {
     println!("Leaffront {}", VERSION);
 
+    let config = config::load_config("config.toml".into());
+
     let context = Context::build().unwrap();
 
-    gl_loop(context);
+    gl_loop(config, context);
 }
