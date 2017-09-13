@@ -13,6 +13,7 @@ use std::error::Error;
 use std::io::Cursor;
 use std::collections::HashMap;
 use std::num::ParseFloatError;
+use std::string::FromUtf8Error;
 
 /// Translate FTP error messages
 fn translate_ftp_error(data : FtpError) -> String {
@@ -81,11 +82,23 @@ fn check_parse<T>(res : Result<T, ParseFloatError>) -> Result<T, String> {
     }
 }
 
+/// Translates utf8 parsing errors
+fn check_utf<T>(res : Result<T, FromUtf8Error>) -> Result<T, String> {
+    match res {
+        Ok(result) => {
+            Ok(result)
+        },
+        Err(err) => {
+            Err(err.description().into())
+        }
+    }
+}
+
 pub struct BOM;
 
 impl BOM {
     /// Fetches the important metadata from the
-    fn fetch_file(&self) -> Result<Vec<u8>, String> {
+    fn fetch_file(&self) -> Result<(Vec<u8>, Vec<u8>), String> {
         let mut ftp = check_ftp(FtpStream::connect("ftp.bom.gov.au:21"))?;
         check_ftp(ftp.login("anonymous", "guest"))?;
 
@@ -96,17 +109,20 @@ impl BOM {
         let data = check_ftp(ftp.simple_retr("IDN10035.xml"))?
             .into_inner().to_owned();
 
+        let data2 = check_ftp(ftp.simple_retr("IDA00101.html"))?
+            .into_inner().to_owned();
+
         check_ftp(ftp.quit())?;
 
-        return Ok(data);
+        return Ok((data, data2));
     }
 }
 
 impl WeatherProvider for BOM {
     fn get_weather() -> Result<Weather, String> {
-        let file = BOM.fetch_file()?;
+        let (xml_des, live_temps) = BOM.fetch_file()?;
 
-        let cursor = Cursor::new(file);
+        let cursor = Cursor::new(xml_des);
         let element = check_xml(Element::parse(cursor))?;
 
         let mut recent_store = HashMap::new();
@@ -150,11 +166,54 @@ impl WeatherProvider for BOM {
             }
         }
 
+        // Parse live temperature
+        let live_temps = check_utf(String::from_utf8(live_temps))?;
+
+        // Trim off first line (h2 header), and the initial comment
+        let mut new_temps = String::new();
+
+        let mut itr = live_temps.lines();
+        let _ = itr.next().unwrap();
+
+        for line in itr {
+            if line.contains("START OF STANDARD BUREAU FOOTER") {
+                break
+            }
+
+            new_temps += line;
+            new_temps.push('\n');
+        }
+
+        // Strip out '&deg;' entities (XML parser doesn't like them)
+        new_temps = new_temps.replace("&deg;", "");
+
+        // Now, attempt to parse that
+        let live_temps = new_temps.into_bytes();
+
+        let cursor = Cursor::new(live_temps);
+        let element = check_xml(Element::parse(cursor))?;
+
+        let tbody : Result<&Element, String> = element.get_child("tbody")
+            .ok_or("\"table\" not found".into());
+        let tbody_elem : Element = tbody?.clone();
+
+        for elem in tbody_elem.children {
+            // Each element here is a city. Find the correct one.
+            let children = elem.children;
+            let first_child = children[0].clone();
+            let second_child = first_child.children[0].clone();
+            if second_child.text.unwrap().contains("Canberra") {
+                let temp = children[1].clone().text.unwrap();
+                values.insert("current_temperature".into(), temp);
+            }
+
+        }
+
+        // Grab the info we want
         let precis = values.get("precis").ok_or("Metadata missing weather description")?
             .to_owned();
 
-        // TODO: Proper current temperature
-        let temperature_raw = values.get("air_temperature_maximum").ok_or("Missing temperature")?
+        let temperature_raw = values.get("current_temperature").ok_or("Missing temperature")?
             .to_owned().parse::<f64>();
 
         let temperature = check_parse(temperature_raw)?;

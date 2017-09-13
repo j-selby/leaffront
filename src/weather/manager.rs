@@ -9,17 +9,15 @@ use std::sync::mpsc::{Sender, Receiver, TryRecvError};
 use std::sync::mpsc;
 
 use std::thread;
-use std::thread::JoinHandle;
 
 use std::time::Duration;
 
-pub struct Manager {
+pub struct WeatherManager {
     input   : Receiver<Result<Weather, String>>,
-    handle  : JoinHandle<()>,
     current : Option<Result<Weather, String>>
 }
 
-impl Manager {
+impl WeatherManager {
     /// Gets the latest weather information.
     pub fn get(&mut self) -> Result<Weather, String> {
         let result = self.input.try_recv();
@@ -53,18 +51,22 @@ impl Manager {
         let (tx, rx): (Sender<Result<Weather, String>>,
                        Receiver<Result<Weather, String>>) = mpsc::channel();
 
-        let handle  = thread::spawn(move || {
+        thread::spawn(move || {
             loop {
-                if false {
-                    tx.send(BOM::get_weather()).unwrap();
+                let weather = BOM::get_weather();
+                let success = weather.is_ok();
+                tx.send(weather).unwrap();
+                if success {
+                    thread::sleep(Duration::from_millis(update_frequency));
+                } else {
+                    println!("Weather update failed; retrying in 10 seconds...");
+                    thread::sleep(Duration::from_millis(10 * 1000));
                 }
-                thread::sleep(Duration::from_millis(update_frequency));
             }
         });
 
-        Manager {
+        WeatherManager {
             input : rx,
-            handle,
             current : None
         }
     }

@@ -11,8 +11,6 @@ extern crate ftp;
 extern crate xmltree;
 extern crate rand;
 
-extern crate fps_counter;
-
 extern crate libc;
 extern crate ctrlc;
 
@@ -26,27 +24,21 @@ mod state;
 mod gl_render;
 mod pi;
 mod weather;
+mod background;
 
 use color::Color;
 use state::ScreenState;
 use state::Message;
-use weather::manager::Manager;
+use weather::manager::WeatherManager;
+use background::manager::BackgroundManager;
 
-use gl_render::texture::GlTexture;
 use gl_render::drawer::Drawer;
 use gl_render::pos::Position;
 use gl_render::pos::Rect;
 use gl_render::font::FontCache;
 
-use videocore::dispmanx;
-use videocore::image::ImageType;
-use videocore::image::Rect as VCRect;
-
 use pi::gl_context::Context;
 use pi::brightness::set_brightness;
-
-use image::load_from_memory;
-use image::GenericImage;
 
 use chrono::Local;
 use chrono::Datelike;
@@ -59,6 +51,8 @@ use rand::thread_rng;
 use std::thread;
 use std::time::Duration;
 use std::time::Instant;
+
+pub static VERSION : &'static str = "2.0.0";
 
 fn check_night(start_night : u32, end_night : u32) -> bool {
     let time = Local::now();
@@ -78,27 +72,22 @@ fn check_night(start_night : u32, end_night : u32) -> bool {
 
     let cur_date = time.naive_local();
 
-    println!("Start time: {}", start_date);
-    println!("End time: {}", end_date);
-
     cur_date > start_date && cur_date < end_date
 }
 
 fn gl_loop(context: Context) {
     // TODO: Move to config file
-    let start_night = 12;//22;
+    let start_night = 22;
     let end_night = 7;
 
     // Create our mechanism for rendering
     let mut drawer = Drawer::new(context);
 
-    println!("Drawer go!");
-
     // Startup input handling
     let mut devices = evdev::enumerate();
 
     for device in &devices {
-        println!("{}", device);
+        println!("Found input device: {:?}", device.name());
     }
 
     let mut check_input = || -> Vec<evdev::raw::input_event> {
@@ -120,22 +109,16 @@ fn gl_loop(context: Context) {
 
     set_brightness(state.get_brightness()).unwrap();
 
-    println!("Brightness go!");
     let mut state_countdown = Instant::now();
 
-    let bg_image = load_from_memory(include_bytes!("../res/bg.jpg")).unwrap();
-
     let font_data = include_bytes!("../res/opensans.ttf");
-
-    let mut counter = fps_counter::FPSCounter::new();
 
     let mut font = FontCache::from_bytes(font_data);
 
     // Enable on non-videocore platforms
     //let bg = GlTexture::from_image(&bg_image.to_rgba());
-    // TODO: Manually resize background to correct resolution ourselves
 
-    let mut weather_manager = Manager::new(20 * 60 * 1000);
+    let mut weather_manager = WeatherManager::new(20 * 60 * 1000);
 
     let mut rng = thread_rng();
     let mut night_x = -1;
@@ -143,54 +126,9 @@ fn gl_loop(context: Context) {
     let mut night_cooldown = Instant::now();
 
     // Update the background
-    /*let mut dest_rect = VCRect {
-        x: 0,
-        y: 0,
-        width: drawer.get_width() as i32,
-        height: drawer.get_width() as i32
-    };*/
-
-    let mut bg_img = bg_image.to_rgb();
-    let bg_ptr = bg_img.as_mut_ptr() as *mut _ as *mut libc::c_void;
-
-    println!("Resources write go!");
-
-    let dest_rect = VCRect {
-        x: 0,
-        y: 0,
-        width: bg_img.width() as i32,
-        height: bg_img.height() as i32
-    };
-
-    println!("Dims: {} {}", bg_img.width() as u32, bg_img.height() as u32);
-
-    let mut ptr = 0;
-    println!("Create resource!");
-    let bg_resource = dispmanx::resource_create(ImageType::RGB888,
-                                                bg_img.width() as u32,
-                                                bg_img.height() as u32,
-                                                &mut ptr);
-
-    println!("Write resource!");
-    if dispmanx::resource_write_data(bg_resource, ImageType::RGB888,
-                                  (3 * bg_image.width()) as i32,
-                                  bg_ptr, &dest_rect) {
-        println!("Failed to write data")
-    }
-
-    let update = dispmanx::update_start(10);
-
-    println!("Change resource!");
-    if dispmanx::element_change_source(update, drawer.context.bg_element, bg_resource) {
-        println!("Resource change failed!");
-    }
-
-    println!("Resources update go!");
-    if dispmanx::update_submit_sync(update) {
-        println!("Failed to update");
-    }
-
-    println!("Resources go!");
+    let bg_mgr = BackgroundManager::new("art".into(), drawer.context.bg_element);
+    let mut bg_countdown = Instant::now();
+    bg_mgr.next();
 
     let running = Arc::new(AtomicBool::new(true));
     let r = running.clone();
@@ -208,6 +146,9 @@ fn gl_loop(context: Context) {
         }
     }).expect("Error setting Ctrl-C handler");
 
+    println!("Initialised successfully.");
+
+    // TODO: Mechanism to immediately wake up loop
     while running.load(Ordering::SeqCst) {
         let input = check_input();
 
@@ -222,6 +163,12 @@ fn gl_loop(context: Context) {
 
         let next_state = match &state {
             &ScreenState::Day(ref msg) => {
+                // TODO: Move time lengths into config
+                if bg_countdown.elapsed() > Duration::from_secs(10) {
+                    bg_countdown = Instant::now();
+                    bg_mgr.next();
+                }
+
                 if night_cooldown.elapsed() > Duration::from_secs(10) &&
                     check_night(start_night, end_night) {
                     state_countdown = Instant::now();
@@ -267,7 +214,7 @@ fn gl_loop(context: Context) {
                 drawer.enable_blending();
 
                 drawer.draw_colored_rect(&Rect::new(0, screen_height - 120, screen_width, 120),
-                                         &Color::new_4byte(0, 0, 0, 100));
+                                         &Color::new_4byte(0, 0, 0, 170));
 
                 let datetime = Local::now();
                 let time = datetime.format("%-I:%M:%S %P").to_string();
@@ -304,9 +251,9 @@ fn gl_loop(context: Context) {
                     }
                 }
 
-                font.draw(&format!("FPS: {}", counter.tick()),
+                /*font.draw(&format!("FPS: {}", counter.tick()),
                           &Color::new_3byte(255, 255, 255),
-                          20, &Position::new(20, 50), &mut drawer);
+                          20, &Position::new(20, 50), &mut drawer);*/
             },
             &ScreenState::Night => {
                 drawer.clear(false);
@@ -366,11 +313,10 @@ fn gl_loop(context: Context) {
     }
 
     println!("Begin shutdown!");
-    dispmanx::resource_delete(bg_resource);
 }
 
 fn main() {
-    // init egl
+    println!("Leaffront {}", VERSION);
 
     let context = Context::build().unwrap();
 

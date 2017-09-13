@@ -2,26 +2,18 @@
 
 // Code from https://github.com/seankerr/rust-rpi-examples
 
-use libc::{ c_void };
-
 use egl;
 use egl::{EGLConfig, EGLContext, EGLDisplay, EGLNativeDisplayType, EGLSurface};
 
 use videocore::bcm_host;
 use videocore::dispmanx;
 use videocore::dispmanx::{FlagsAlpha, Transform, VCAlpha, Window, DisplayHandle, UpdateHandle,
-                            ElementHandle, ResourceHandle};
+                            ElementHandle};
 use videocore::image::Rect;
-use videocore::image::ImageType;
 
 use videocore::bcm_host::GraphicsDisplaySize;
 
 use std::ptr;
-
-use std::sync::mpsc::{Sender, Receiver};
-use std::sync::mpsc;
-
-use std::mem::transmute;
 
 pub struct Context {
     pub config:  EGLConfig,
@@ -34,23 +26,8 @@ pub struct Context {
     pub update : UpdateHandle,
     element : ElementHandle,
 
-    //pub bg_resource : ResourceHandle,
     pub bg_element : ElementHandle
 }
-
-extern "C" fn callback(handle: UpdateHandle, ptr : *mut c_void) {
-    let tx : *const Sender<UpdateHandle> = unsafe { transmute(ptr) };
-    let tx : &Sender<UpdateHandle> = unsafe { tx.as_ref().unwrap() };
-    match tx.send(handle) {
-        Ok(_) => {},
-        Err(err) => {
-            println!("callback err: {}", err);
-        },
-    }
-
-}
-
-extern "C" fn null_callback(_: UpdateHandle, _ : *mut c_void) {}
 
 impl Context {
     /// Returns the screen resolution of the device.
@@ -61,19 +38,6 @@ impl Context {
     /// Swaps GPU buffers.
     pub fn swap_buffers(&self) -> bool {
         egl::swap_buffers(self.display, self.surface)
-    }
-
-    /// Waits for a vsync event from H/W.
-    pub fn wait_for_vsync(&self) {
-        let (tx, rx): (Sender<UpdateHandle>, Receiver<UpdateHandle>) = mpsc::channel();
-
-        dispmanx::vsync_callback(self.dispman_display, callback,
-                                 unsafe { transmute(&tx as *const Sender<UpdateHandle>) } );
-
-        let _ : UpdateHandle = rx.recv().unwrap();
-
-        dispmanx::vsync_callback(self.dispman_display, null_callback,
-                                 unsafe { transmute(&tx as *const Sender<UpdateHandle>) } );
     }
 
     pub fn build() -> Result<Self, String> {
@@ -112,28 +76,12 @@ impl Context {
             height: (dimensions.height as i32) << 16
         };
 
-        /*let mut alpha = VCAlpha {
-            flags: FlagsAlpha::FIXED_ALL_PIXELS,
-            opacity: 255,
-            mask: 0
-        };*/
-        //let flag1: u32 = unsafe { ::std::mem::transmute(FlagsAlpha::FROM_SOURCE) };
-        //let flag2: u32 = unsafe { ::std::mem::transmute(FlagsAlpha::FIXED_ALL_PIXELS) };
-
         let mut alpha = VCAlpha {
             flags: FlagsAlpha::FIXED_ALL_PIXELS,
             opacity: 255,
             mask: 0
         };
 
-        // Create a resource for drawing onto
-        /*let mut ptr = 0;
-        let bg_resource = dispmanx::resource_create(ImageType::RGB888,
-                                                    dimensions.width as u32,
-                                                    dimensions.height as u32,
-                                                    &mut ptr);*/
-
-        println!("e1");
         // Create a element to hold the background
         let bg_element = dispmanx::element_add(update, display,
                                             2, // layer upon which to draw
@@ -161,7 +109,6 @@ impl Context {
             height: 0
         };
 
-        println!("e2");
         // create our dispmanx element upon which we'll draw opengl using EGL
         let element = dispmanx::element_add(update, display,
                                   3, // layer upon which to draw
@@ -173,10 +120,8 @@ impl Context {
                                   ptr::null_mut(),
                                   Transform::NO_ROTATE);
 
-        println!("Enter sync");
         // submit changes
         dispmanx::update_submit_sync(update);
-        println!("sync done");
 
         // create window to hold element, width, height
         let mut window = Box::new( Window {
@@ -247,7 +192,7 @@ impl Context {
         }
 
         // add a vsync/swap interval
-        egl::swap_interval(egl_display, 0);//1);
+        egl::swap_interval(egl_display, 1);
 
         Ok(Self {
             config: egl_config,
@@ -260,7 +205,6 @@ impl Context {
             update,
             element,
 
-            //bg_resource,
             bg_element
         })
     }
@@ -275,9 +219,6 @@ impl Drop for Context {
 
         dispmanx::element_remove(self.update, self.element);
         dispmanx::element_remove(self.update, self.bg_element);
-
-        //dispmanx::resource_delete(self.bg_resource);
-
         dispmanx::update_submit_sync(self.update);
         // "Update" cannot be deleted?
 
