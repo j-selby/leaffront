@@ -34,7 +34,7 @@ pub struct Context {
     pub update : UpdateHandle,
     element : ElementHandle,
 
-    pub bg_resource : ResourceHandle,
+    //pub bg_resource : ResourceHandle,
     pub bg_element : ElementHandle
 }
 
@@ -127,18 +127,18 @@ impl Context {
         };
 
         // Create a resource for drawing onto
-        let mut ptr = 0;
+        /*let mut ptr = 0;
         let bg_resource = dispmanx::resource_create(ImageType::RGB888,
                                                     dimensions.width as u32,
                                                     dimensions.height as u32,
-                                                    &mut ptr);
+                                                    &mut ptr);*/
 
         println!("e1");
         // Create a element to hold the background
         let bg_element = dispmanx::element_add(update, display,
-                                            1, // layer upon which to draw
+                                            2, // layer upon which to draw
                                             &mut dest_rect,
-                                               bg_resource,
+                                               0,//bg_resource,
                                             &mut src_rect,
                                             dispmanx::DISPMANX_PROTECTION_NONE,
                                             &mut alpha,
@@ -149,7 +149,7 @@ impl Context {
         // TODO: Make this transparent
         let mut alpha = VCAlpha {
             flags: FlagsAlpha::FROM_SOURCE,
-            opacity: 128,
+            opacity: 255,
             mask: 0
         };
 
@@ -164,7 +164,7 @@ impl Context {
         println!("e2");
         // create our dispmanx element upon which we'll draw opengl using EGL
         let element = dispmanx::element_add(update, display,
-                                  2, // layer upon which to draw
+                                  3, // layer upon which to draw
                                   &mut dest_rect,
                                   0,
                                   &mut src_rect,
@@ -247,7 +247,7 @@ impl Context {
         }
 
         // add a vsync/swap interval
-        egl::swap_interval(egl_display, 1);
+        egl::swap_interval(egl_display, 0);//1);
 
         Ok(Self {
             config: egl_config,
@@ -260,7 +260,7 @@ impl Context {
             update,
             element,
 
-            bg_resource,
+            //bg_resource,
             bg_element
         })
     }
@@ -275,6 +275,8 @@ impl Drop for Context {
 
         dispmanx::element_remove(self.update, self.element);
         dispmanx::element_remove(self.update, self.bg_element);
+
+        //dispmanx::resource_delete(self.bg_resource);
 
         dispmanx::update_submit_sync(self.update);
         // "Update" cannot be deleted?
