@@ -12,6 +12,8 @@ pub struct GlTexture {
     ptr    : gl::GLuint
 }
 
+// Contains several fairly fundamental operations to handling images.
+#[allow(dead_code)]
 impl GlTexture {
     /// Binds this OpenGL texture. This struct must
     /// remain in scope for the entire duration of usage.

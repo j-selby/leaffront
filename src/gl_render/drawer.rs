@@ -46,6 +46,8 @@ pub struct Drawer {
     pub context : Context
 }
 
+// Meant to be extendable - other means of drawing should be exposed
+#[allow(dead_code)]
 impl Drawer {
     /// Changes shaders, and ensures that GLES is ready to use it.
     fn configure_state(&mut self, target : DrawState) {
@@ -129,11 +131,6 @@ impl Drawer {
         if !self.context.swap_buffers() {
             panic!("Failed to swap buffers!");
         }
-    }
-
-    /// Waits for vertical sync.
-    pub fn vsync(&self) {
-        self.context.wait_for_vsync();
     }
 
     /// Clears the framebuffer.
