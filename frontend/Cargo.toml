@@ -1,0 +1,23 @@
+[package]
+name = "frontend"
+version = "0.1.0"
+authors = ["James <jselby@jselby.net>"]
+
+[dependencies]
+evdev = "0.10.1"
+
+serde = "1.0.14"
+serde_derive = "1.0.14"
+toml = "0.4.5"
+clap = "2.26.0"
+
+chrono = "0.4.0"
+
+ctrlc = "3.0"
+
+image = "0.15.0"
+rand = "0.3.16"
+
+leaffront_core = { path = "../core" }
+leaffront_render_pi = { path = "../render_pi" }
+leaffront_weather = { path = "../weather" }
