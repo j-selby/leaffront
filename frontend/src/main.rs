@@ -2,8 +2,6 @@ extern crate leaffront_core;
 extern crate leaffront_render_pi;
 extern crate leaffront_weather;
 
-extern crate videocore;
-
 extern crate evdev;
 
 #[macro_use]

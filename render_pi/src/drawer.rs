@@ -121,8 +121,8 @@ impl PiDrawer {
         let uv_vbo = GLVBO::new();
 
         let colored_shader = GLSLShader::create_shader(
-            include_bytes!("../../res/shaders/color.vert"),
-            include_bytes!("../../res/shaders/color.frag")).unwrap();
+            include_bytes!("../res/shaders/color.vert"),
+            include_bytes!("../res/shaders/color.frag")).unwrap();
 
         colored_shader.use_program();
         let attr_colored_vertex = colored_shader.get_attribute("input_vertex");
@@ -132,8 +132,8 @@ impl PiDrawer {
         gl::enable_vertex_attrib_array(attr_colored_vertex as gl::GLuint);
 
         let textured_shader = GLSLShader::create_shader(
-            include_bytes!("../../res/shaders/tex.vert"),
-            include_bytes!("../../res/shaders/tex.frag")).unwrap();
+            include_bytes!("../res/shaders/tex.vert"),
+            include_bytes!("../res/shaders/tex.frag")).unwrap();
 
         textured_shader.use_program();
         let attr_textured_vertex = textured_shader.get_attribute("input_vertex");
