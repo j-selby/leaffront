@@ -23,7 +23,6 @@ extern crate ctrlc;
 mod state;
 mod config;
 
-mod pi;
 mod background;
 mod watchdog;
 
@@ -35,20 +34,15 @@ use leaffront_core::render::Drawer;
 use leaffront_core::pos::Position;
 use leaffront_core::pos::Rect;
 
+use leaffront_weather::manager::WeatherManager;
+
+// TODO: Abstract between platforms
 use leaffront_render_pi::drawer::PiDrawer;
 
 use state::ScreenState;
 use state::Message;
-use leaffront_weather::manager::WeatherManager;
 use background::manager::BackgroundManager;
 use watchdog::Watchdog;
-
-/*use gl_render::drawer::Drawer;
-use gl_render::pos::Position;
-use gl_render::pos::Rect;
-use gl_render::font::FontCache;*/
-
-use pi::brightness::set_brightness;
 
 use clap::{Arg, App};
 
@@ -134,7 +128,7 @@ fn main_loop(config : LeaffrontConfig) {
         ScreenState::Day(_) => config.day.brightness,
         ScreenState::Night => config.night.brightness,
     };
-    set_brightness(brightness).unwrap();
+    drawer.set_brightness(brightness).unwrap();
 
     let mut state_countdown = Instant::now();
 
@@ -236,7 +230,7 @@ fn main_loop(config : LeaffrontConfig) {
                     ScreenState::Day(_) => config.day.brightness,
                     ScreenState::Night => config.night.brightness,
                 };
-                set_brightness(brightness).unwrap();
+                drawer.set_brightness(brightness).unwrap();
             }
             None => {}
         }
@@ -248,10 +242,6 @@ fn main_loop(config : LeaffrontConfig) {
         match &state {
             &ScreenState::Day(ref subtitle) => {
                 drawer.clear(true);
-                // Enable on non-Videocore platforms
-                /*drawer.draw_texture_sized(&bg, &Rect::new(0, 0, screen_width, screen_height),
-                                          &Color::new_4byte(255, 255, 255, 255));*/
-
                 drawer.enable_blending();
 
                 drawer.draw_colored_rect(&Rect::new(0, screen_height - 120, screen_width, 120),

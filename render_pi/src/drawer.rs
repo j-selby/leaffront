@@ -17,6 +17,8 @@ use videocore::bcm_host::GraphicsDisplaySize;
 
 use gl_context::Context;
 
+use brightness::set_brightness;
+
 use shader::GLSLShader;
 use vbo::GLVBO;
 use texture::GlTexture;
@@ -343,6 +345,11 @@ impl Drawer for PiDrawer {
         }
 
         self.bg = Some(bg_resource);
+    }
+
+    /// Sets the brightness of the screen.
+    fn set_brightness(&mut self, val: u8) -> ::std::io::Result<()> {
+        set_brightness(val)
     }
 }
 

@@ -50,6 +50,9 @@ pub trait Drawer {
     /// have ways to accelerate this beyond OpenGL calls.
     fn set_background(&mut self, image : DynamicImage);
 
+    /// Sets the screen brightness, if possible. Ignore call if not.
+    fn set_brightness(&mut self, brightness : u8) -> ::std::io::Result<()>;
+
     /// Draws a texture to the screen, with a specified set of vertices to draw to, a UV
     /// to decode the image with, and a color to use as a base.
     fn draw_textured_vertices_colored_uv(&mut self, texture : &Self::NativeTexture, vertices : &[f32],
