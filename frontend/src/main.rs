@@ -1,8 +1,7 @@
 extern crate leaffront_core;
 extern crate leaffront_render_pi;
+extern crate leaffront_input_pi;
 extern crate leaffront_weather;
-
-extern crate evdev;
 
 #[macro_use]
 extern crate serde_derive;
@@ -31,15 +30,18 @@ use leaffront_core::render::font::FontCache;
 use leaffront_core::render::Drawer;
 use leaffront_core::pos::Position;
 use leaffront_core::pos::Rect;
+use leaffront_core::input::Input;
 
 use leaffront_weather::manager::WeatherManager;
 
 // TODO: Abstract between platforms
 use leaffront_render_pi::drawer::PiDrawer;
+use leaffront_input_pi::PiInput;
+
+use background::manager::BackgroundManager;
 
 use state::ScreenState;
 use state::Message;
-use background::manager::BackgroundManager;
 use watchdog::Watchdog;
 
 use clap::{Arg, App};
@@ -99,21 +101,7 @@ fn main_loop(config : LeaffrontConfig) {
     let mut drawer = PiDrawer::new();
 
     // Startup input handling
-    let mut devices = evdev::enumerate();
-
-    for device in &devices {
-        println!("Found input device: {:?}", device.name());
-    }
-
-    let mut check_input = || -> Vec<evdev::raw::input_event> {
-        let mut input = Vec::new();
-        for mut device  in &mut devices {
-            for evt in  device.events_no_sync().unwrap() {
-                input.push(evt);
-            }
-        }
-        input
-    };
+    let mut input = PiInput::new();
 
     // Check the startup time
     let mut state = if check_night(start_night, end_night) {
@@ -172,16 +160,9 @@ fn main_loop(config : LeaffrontConfig) {
     while running.load(Ordering::SeqCst) {
         watchdog.ping();
 
-        let input = check_input();
+        input.update(&drawer);
 
-        let mut touched = false;
-
-        for input in input {
-            if input._type == 3 {
-                touched = true;
-                break;
-            }
-        }
+        let touched = input.is_mouse_down();
 
         let next_img = bg_mgr.get_next();
         match next_img {
