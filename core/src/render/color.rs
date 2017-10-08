@@ -9,6 +9,7 @@ pub struct Color {
 }
 
 impl Color {
+    /// Creates a new copy, as Color is meant to remain immutable
     pub fn alpha(&self, a : u8) -> Self {
         let mut cloned = self.clone();
         cloned.a = a;

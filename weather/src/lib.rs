@@ -1,3 +1,6 @@
+extern crate ftp;
+extern crate xmltree;
+
 /// Defines basic types about weather
 
 pub mod bom;

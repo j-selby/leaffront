@@ -2,7 +2,8 @@
 
 use opengles::glesv2 as gl;
 
-use texture::Texture;
+use leaffront_core::render::Dimensions;
+use leaffront_core::render::texture::Texture;
 
 use image::RgbaImage;
 
@@ -12,27 +13,9 @@ pub struct GlTexture {
     ptr    : gl::GLuint
 }
 
-// Contains several fairly fundamental operations to handling images.
-#[allow(dead_code)]
 impl GlTexture {
-    /// Binds this OpenGL texture. This struct must
-    /// remain in scope for the entire duration of usage.
-    pub fn bind_texture(&self, target : gl::GLenum) {
-        gl::bind_texture(target, self.ptr)
-    }
-
-    /// Returns the width of this texture.
-    pub fn get_width(&self) -> usize {
-        self.width
-    }
-
-    /// Returns the height of this texture.
-    pub fn get_height(&self) -> usize {
-        self.height
-    }
-
     /// Converts a RGBA byte array to a OpenGL reference.
-    pub fn from_bytes(bytes : &[u8], width : usize, height : usize) -> Self {
+    fn from_bytes(bytes : &[u8], width : usize, height : usize) -> Self {
         let texture_ref : gl::GLuint = gl::gen_textures(1)[0];
         gl::bind_texture(gl::GL_TEXTURE_2D, texture_ref);
         gl::tex_image_2d(gl::GL_TEXTURE_2D, 0 as gl::GLint, gl::GL_RGBA as gl::GLint,
@@ -67,6 +50,24 @@ impl GlTexture {
     /// Converts a image to a OpenGL reference.
     pub fn from_image(tex : &RgbaImage) -> Self {
         GlTexture::from_bytes(tex.as_ref(), tex.width() as usize, tex.height() as usize)
+    }
+
+    /// Binds this OpenGL texture. This struct must
+    /// remain in scope for the entire duration of usage.
+    pub fn bind_texture(&self, target : gl::GLenum) {
+        gl::bind_texture(target, self.ptr)
+    }
+}
+
+impl Dimensions for GlTexture {
+    /// Returns the width of this texture.
+    fn get_width(&self) -> usize {
+        self.width
+    }
+
+    /// Returns the height of this texture.
+    fn get_height(&self) -> usize {
+        self.height
     }
 }
 
