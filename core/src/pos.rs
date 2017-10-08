@@ -12,7 +12,7 @@ impl Position {
     }
 }
 
-/// Represents a X/Y position + width and height.
+/// Represents a X/Y position, width and height.
 pub struct Rect {
     pub x : i32,
     pub y : i32,

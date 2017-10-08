@@ -1,7 +1,7 @@
 /// Fetches weather from BOM
 
-use weather::Weather;
-use weather::WeatherProvider;
+use Weather;
+use WeatherProvider;
 
 use xmltree::Element;
 use xmltree::ParseError;

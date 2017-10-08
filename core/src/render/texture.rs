@@ -1,7 +1,7 @@
 /// Handles OpenGLES textures, and provides mechanisms for interacting/drawing on them
 /// safely.
 
-use color::Color;
+use render::color::Color;
 
 pub struct Texture {
     pub tex_data : Vec<u8>,

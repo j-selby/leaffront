@@ -1,9 +1,9 @@
 /// The weather manager controls a weather polling thread, and provides a mechanism to poll
 /// for weather whenever required.
 
-use weather::Weather;
-use weather::WeatherProvider;
-use weather::bom::BOM;
+use Weather;
+use WeatherProvider;
+use bom::BOM;
 
 use std::sync::mpsc::{Sender, Receiver};
 use std::sync::mpsc;

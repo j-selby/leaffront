@@ -1,6 +1,9 @@
-extern crate egl;
-extern crate opengles;
+extern crate leaffront_core;
+extern crate leaffront_render_pi;
+extern crate leaffront_weather;
+
 extern crate videocore;
+
 extern crate evdev;
 
 #[macro_use]
@@ -11,42 +14,41 @@ extern crate toml;
 extern crate clap;
 
 extern crate image;
-extern crate rusttype;
 
 extern crate chrono;
-extern crate ftp;
-extern crate xmltree;
 extern crate rand;
 
 extern crate libc;
 extern crate ctrlc;
 
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
-
-mod color;
-mod texture;
 mod state;
 mod config;
 
-mod gl_render;
 mod pi;
-mod weather;
 mod background;
+mod watchdog;
 
 use config::LeaffrontConfig;
-use color::Color;
+
+use leaffront_core::render::color::Color;
+use leaffront_core::render::font::FontCache;
+use leaffront_core::render::Drawer;
+use leaffront_core::pos::Position;
+use leaffront_core::pos::Rect;
+
+use leaffront_render_pi::drawer::PiDrawer;
+
 use state::ScreenState;
 use state::Message;
-use weather::manager::WeatherManager;
+use leaffront_weather::manager::WeatherManager;
 use background::manager::BackgroundManager;
+use watchdog::Watchdog;
 
-use gl_render::drawer::Drawer;
+/*use gl_render::drawer::Drawer;
 use gl_render::pos::Position;
 use gl_render::pos::Rect;
-use gl_render::font::FontCache;
+use gl_render::font::FontCache;*/
 
-use pi::gl_context::Context;
 use pi::brightness::set_brightness;
 
 use clap::{Arg, App};
@@ -63,6 +65,9 @@ use std::thread;
 use std::time::Duration;
 use std::time::Instant;
 
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+
 pub static VERSION : &'static str = "2.0.0";
 
 fn check_night(start_night : u32, end_night : u32) -> bool {
@@ -72,7 +77,7 @@ fn check_night(start_night : u32, end_night : u32) -> bool {
     let cur_date = time.naive_local();
     let cur_time = cur_date.time();
 
-    let start_date = if (cur_time < start_time) && !(start_time < end_time) {
+    let start_date = if (cur_time < end_time) && !(start_time < end_time) {
         // Early morning
         let start_date = time.date().naive_local();
         let start_date = start_date - cDuration::days(1);
@@ -93,12 +98,14 @@ fn check_night(start_night : u32, end_night : u32) -> bool {
     cur_date > start_date && cur_date < end_date
 }
 
-fn main_loop(config : LeaffrontConfig, context: Context) {
+fn main_loop(config : LeaffrontConfig) {
     let start_night = config.sleep.sleep_hour;
     let end_night = config.sleep.wakeup_hour;
 
+    let watchdog = Watchdog::build();
+
     // Create our mechanism for rendering
-    let mut drawer = Drawer::new(context);
+    let mut drawer = PiDrawer::new();
 
     // Startup input handling
     let mut devices = evdev::enumerate();
@@ -172,6 +179,8 @@ fn main_loop(config : LeaffrontConfig, context: Context) {
 
     // TODO: Mechanism to immediately wake up loop
     while running.load(Ordering::SeqCst) {
+        watchdog.ping();
+
         let input = check_input();
 
         let mut touched = false;
@@ -366,7 +375,5 @@ fn main() {
 
     let config = config::load_config(config_file.into());
 
-    let context = Context::build().unwrap();
-
-    main_loop(config, context);
+    main_loop(config);
 }

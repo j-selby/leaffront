@@ -6,13 +6,12 @@ use rusttype::FontCollection;
 use rusttype::Scale;
 use rusttype::Point;
 
-use gl_render::texture::GlTexture;
-use gl_render::drawer::Drawer;
-use gl_render::pos::Position;
+use pos::Position;
 
-use color::Color;
-
-use texture::Texture;
+use render::Drawer;
+use render::Dimensions;
+use render::color::Color;
+use render::texture::Texture;
 
 use std::collections::BTreeMap;
 
@@ -23,12 +22,12 @@ struct CachedGlyph {
     size  : i32
 }
 
-pub struct FontCache<'a> {
+pub struct FontCache<'a, T : Sized> {
     font  : Font<'a>,
-    cache : BTreeMap<CachedGlyph, GlTexture>
+    cache : BTreeMap<CachedGlyph, T>
 }
 
-impl<'a> FontCache<'a> {
+impl<'a, T : Dimensions> FontCache<'a, T> {
     /// Returns the width of a specified string.
     pub fn get_width(&self, text : &str, size : i32) -> i32 {
         let layout = self.font.layout(text, Scale::uniform(size as f32),
@@ -53,7 +52,7 @@ impl<'a> FontCache<'a> {
 
     /// Draws the specified string to the screen.
     pub fn draw(&mut self, text : &str, color : &Color, size : i32, pos : &Position,
-                draw : &mut Drawer) {
+                draw : &mut Drawer<NativeTexture=T>) {
         let layout = self.font.layout(text, Scale::uniform(size as f32),
                                       Point { x : pos.x as f32, y : pos.y as f32 });
 
@@ -87,7 +86,7 @@ impl<'a> FontCache<'a> {
                     glyph.draw(render_pos);
                 }
 
-                let opengl_tex = GlTexture::from_texture(&tex);
+                let opengl_tex = draw.convert_native_texture(tex);
 
                 self.cache.insert(id.clone(), opengl_tex);
             }

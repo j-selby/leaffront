@@ -1,6 +1,4 @@
-#!/usr/bin/env bash
-source $HOME/.cargo/env
+#!/usr/bin/env bash -e
+. $HOME/.cargo/env
 
-set -e
-
-cargo build --target armv7-unknown-linux-gnueabihf -vv --release
+CARGO_INCREMENTAL=1 cargo build --target armv7-unknown-linux-gnueabihf -vv --release
