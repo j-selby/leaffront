@@ -18,7 +18,6 @@ extern crate image;
 extern crate chrono;
 extern crate rand;
 
-extern crate libc;
 extern crate ctrlc;
 
 mod state;
@@ -155,7 +154,7 @@ fn main_loop(config : LeaffrontConfig) {
     let mut night_cooldown = Instant::now();
 
     // Update the background
-    let bg_mgr = BackgroundManager::new(config.art_dir, drawer.context.bg_element);
+    let bg_mgr = BackgroundManager::new(config.art_dir);
     let mut bg_countdown = Instant::now();
     bg_mgr.next();
 
@@ -190,6 +189,14 @@ fn main_loop(config : LeaffrontConfig) {
                 touched = true;
                 break;
             }
+        }
+
+        let next_img = bg_mgr.get_next();
+        match next_img {
+            Some(img) => {
+                drawer.set_background(img);
+            }
+            _ => {}
         }
 
         let next_state = match &state {

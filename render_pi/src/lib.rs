@@ -6,11 +6,12 @@ extern crate videocore;
 
 extern crate image;
 
-// TODO: Hide all these, bar drawer
+extern crate libc;
+
 mod gl_context;
 
-pub mod shader;
-pub mod texture;
-pub mod vbo;
+mod shader;
+mod texture;
+mod vbo;
 
 pub mod drawer;

@@ -8,6 +8,8 @@ use pos::Rect;
 use render::color::Color;
 use render::texture::Texture;
 
+use image::DynamicImage;
+
 /// The dimensions of a object
 pub trait Dimensions {
     /// Returns the width of this object.
@@ -43,6 +45,10 @@ pub trait Drawer {
 
     /// Returns the height of the framebuffer.
     fn get_height(&self) -> usize;
+
+    /// Uses the specified image as a background. This is provided as several platforms
+    /// have ways to accelerate this beyond OpenGL calls.
+    fn set_background(&mut self, image : DynamicImage);
 
     /// Draws a texture to the screen, with a specified set of vertices to draw to, a UV
     /// to decode the image with, and a color to use as a base.
