@@ -2,6 +2,17 @@
 
 use opengles::glesv2 as gl;
 
+use image::DynamicImage;
+
+use videocore::dispmanx;
+use videocore::dispmanx::ElementHandle;
+use videocore::dispmanx::ResourceHandle;
+use videocore::dispmanx::Transform;
+use videocore::image::ImageType;
+use videocore::image::Rect as VCRect;
+
+use libc::c_void;
+
 use videocore::bcm_host::GraphicsDisplaySize;
 
 use gl_context::Context;
@@ -46,7 +57,9 @@ pub struct PiDrawer {
     uv : GLVBO,
     attr_textured_uv : gl::GLint,
 
-    pub context : Context
+    context : Context,
+
+    bg : Option<ResourceHandle>
 }
 
 impl PiDrawer {
@@ -142,7 +155,8 @@ impl PiDrawer {
             attr_colored_color,
             attr_textured_color,
             uv       : uv_vbo,
-            attr_textured_uv
+            attr_textured_uv,
+            bg       : None
         }
     }
 }
@@ -225,4 +239,124 @@ impl Drawer for PiDrawer {
         gl::draw_arrays(gl::GL_TRIANGLE_STRIP, 0, (vertices.len() / 2) as gl::GLsizei);
     }
 
+    /// Uses the specified image as a background. This is provided as several platforms
+    /// have ways to accelerate this beyond OpenGL calls.
+    fn set_background(&mut self, image: DynamicImage) {
+        match self.bg {
+            Some(resource) => {
+                dispmanx::resource_delete(resource);
+            },
+            _ => {}
+        }
+
+        let bg_img = image.to_rgb();
+
+        // Resize the background to the correct size
+        //let size = Context::get_resolution();
+
+        // Pad out the image, if required
+        let target_width;
+        let target_height;
+        let padding;
+
+        let mut img_buffer = if bg_img.width() % 16 != 0 {
+            // Find the next multiple that *is* even
+            padding = 16 - (bg_img.width() % 16);
+            target_width = bg_img.width();
+            target_height = bg_img.height();
+
+            let old_width = bg_img.width();
+
+            let bg_img = bg_img.to_vec();
+
+            let mut buf: Vec<u8> = vec![0; ((target_width + padding) * target_height * 3) as usize];
+            for y in 0 .. target_height {
+                for x in 0 .. old_width {
+                    buf[((y * (target_width + padding) + x) * 3) as usize]
+                        = bg_img[((y * old_width + x) * 3) as usize];
+                    buf[((y * (target_width + padding) + x) * 3 + 1) as usize]
+                        = bg_img[((y * old_width + x) * 3 + 1) as usize];
+                    buf[((y * (target_width + padding) + x) * 3 + 2) as usize]
+                        = bg_img[((y * old_width + x) * 3 + 2) as usize];
+                }
+            }
+
+            buf
+        } else {
+            target_width = bg_img.width();
+            target_height = bg_img.height();
+            padding = 0;
+            bg_img.to_vec()
+        };
+
+        let bg_ptr = img_buffer.as_mut_ptr() as *mut _ as *mut c_void;
+        let mut ptr = 0; // Unused
+
+        let dest_rect = VCRect {
+            x: 0,
+            y: 0,
+            width: target_width as i32,
+            height: target_height as i32
+        };
+
+        let element = self.context.bg_element;
+
+        let bg_resource = dispmanx::resource_create(ImageType::RGB888,
+                                                    target_width as u32,
+                                                    target_height as u32,
+                                                    &mut ptr);
+
+        if dispmanx::resource_write_data(bg_resource, ImageType::RGB888,
+                                         (3 * (target_width + padding)) as i32,
+                                         bg_ptr, &dest_rect) {
+            println!("Failed to write data")
+        }
+
+        let update = dispmanx::update_start(10);
+
+        // Resize the element's src attr
+        //println!("Img dims: {} {}", target_width, target_height);
+
+        let src_rect = VCRect {
+            x : 0,
+            y : 0,
+            width : (target_width as i32) << 16,
+            height : (target_height as i32) << 16
+        };
+
+        dispmanx::element_change_attributes(update, element,
+                                            (1 << 3) | (1 << 2),
+                                            0, // Ignored
+                                            255, // Ignored
+                                            &src_rect,//&dest_rect,
+                                            &dest_rect,//&src_rect,
+                                            0, // Ignored
+                                            Transform::NO_ROTATE // Ignored
+        );
+
+        if dispmanx::element_change_source(update, element, bg_resource) {
+            println!("Resource change failed!");
+        }
+
+        if dispmanx::update_submit_sync(update) {
+            println!("Failed to update");
+        }
+
+        self.bg = Some(bg_resource);
+    }
+}
+
+impl Drop for PiDrawer {
+    fn drop(&mut self) {
+        print!("Cleaning up background: ");
+
+        match self.bg {
+            Some(resource) => {
+                dispmanx::resource_delete(resource);
+            },
+            _ => {}
+        }
+
+        println!("Done!");
+    }
 }
