@@ -4,8 +4,6 @@ version = "0.1.0"
 authors = ["James <jselby@jselby.net>"]
 
 [dependencies]
-evdev = "0.10.1"
-
 serde = "1.0.14"
 serde_derive = "1.0.14"
 toml = "0.4.5"
@@ -19,5 +17,7 @@ image = "0.15.0"
 rand = "0.3.16"
 
 leaffront-core = { path = "../core" }
-leaffront-render-pi = { path = "../render_pi" }
 leaffront-weather = { path = "../weather" }
+
+leaffront-render-pi = { path = "../render_pi" }
+leaffront-input-pi = { path = "../input_pi" }
