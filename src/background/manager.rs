@@ -108,7 +108,7 @@ impl BackgroundManager {
                     break 'file bg_img;
                 };
 
-                img_tx.send(bg_img);
+                img_tx.send(bg_img).unwrap();
             }
         });
 
