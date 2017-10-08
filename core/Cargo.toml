@@ -1,0 +1,7 @@
+[package]
+name = "leaffront_core"
+version = "0.1.0"
+authors = ["James <jselby@jselby.net>"]
+
+[dependencies]
+rusttype = "0.2.1"
