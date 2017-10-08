@@ -10,8 +10,7 @@ use std::process;
 use std::error::Error;
 
 enum WatchdogError {
-    Shutdown,
-    Error(String)
+    Shutdown
 }
 
 pub struct Watchdog {
@@ -36,7 +35,6 @@ impl Watchdog {
                 match rx.recv_timeout(Duration::from_secs(2)) {
                     Ok(Ok(_)) => {},
                     Ok(Err(WatchdogError::Shutdown)) => break,
-                    Ok(Err(WatchdogError::Error(msg))) => panic!("Unknown error: {}", msg),
                     Err(err) => {
                         println!("Got receive error: {}", err.description());
                         println!("Watchdog fired. Shutting down...");

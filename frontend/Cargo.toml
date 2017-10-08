@@ -1,5 +1,5 @@
 [package]
-name = "frontend"
+name = "leaffront-frontend"
 version = "0.1.0"
 authors = ["James <jselby@jselby.net>"]
 
@@ -18,6 +18,6 @@ ctrlc = "3.0"
 image = "0.15.0"
 rand = "0.3.16"
 
-leaffront_core = { path = "../core" }
-leaffront_render_pi = { path = "../render_pi" }
-leaffront_weather = { path = "../weather" }
+leaffront-core = { path = "../core" }
+leaffront-render-pi = { path = "../render_pi" }
+leaffront-weather = { path = "../weather" }

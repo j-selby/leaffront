@@ -5,7 +5,6 @@ use opengles::glesv2 as gl;
 use image::DynamicImage;
 
 use videocore::dispmanx;
-use videocore::dispmanx::ElementHandle;
 use videocore::dispmanx::ResourceHandle;
 use videocore::dispmanx::Transform;
 use videocore::image::ImageType;
@@ -23,12 +22,8 @@ use shader::GLSLShader;
 use vbo::GLVBO;
 use texture::GlTexture;
 
-use leaffront_core::pos::Position;
-use leaffront_core::pos::Rect;
-
 use leaffront_core::render::Drawer;
 use leaffront_core::render::texture::Texture;
-use leaffront_core::render::color::Color;
 
 #[derive(Ord, PartialOrd, Eq, PartialEq)]
 enum DrawState {
