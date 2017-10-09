@@ -9,15 +9,16 @@ use shader::GLSLShader;
 
 use vbo::GLVBO;
 
+use leaffront_core::pos::Rect;
+use leaffront_core::render::color::Color;
+
 use glutin;
 use glutin::GlContext;
 
 use gl;
 
-use libc;
-
 use std::ptr;
-use std::mem::transmute;
+use std::mem;
 
 use std::os::raw::c_void;
 use std::os::raw::c_char;
@@ -49,6 +50,9 @@ pub struct GlutinDrawer {
     // Used by textured shader
     uv : GLVBO,
     attr_textured_uv : gl::types::GLint,
+
+    // Background image
+    background : Option<GlTexture>,
 
     state : DrawState,
 }
@@ -108,7 +112,7 @@ impl GlutinDrawer {
     }
 
     pub fn new() -> Self {
-        let mut events_loop = glutin::EventsLoop::new();
+        let events_loop = glutin::EventsLoop::new();
         let window = glutin::WindowBuilder::new()
             .with_title("Leaffront")
             .with_dimensions(1270, 720);
@@ -139,6 +143,13 @@ impl GlutinDrawer {
         let vertex_vbo = GLVBO::new();
         let color_vbo = GLVBO::new();
         let uv_vbo = GLVBO::new();
+
+        unsafe {
+            // TODO: Fucking unsafe
+            let mut ptr = mem::uninitialized();
+            gl::GenVertexArrays(1, &mut ptr);
+            gl::BindVertexArray(ptr);
+        }
 
         let colored_shader = GLSLShader::create_shader(
             include_bytes!("../res/shaders/color.vert"),
@@ -182,6 +193,7 @@ impl GlutinDrawer {
             attr_textured_color,
             uv : uv_vbo,
             attr_textured_uv,
+            background : None
         }
     }
 }
@@ -191,6 +203,12 @@ impl Drawer for GlutinDrawer {
 
     fn start(&mut self) {
         self.state = DrawState::None;
+
+        let (width, height) = self.gl_window.get_inner_size().unwrap();
+
+        unsafe {
+            gl::Viewport(0, 0, width as i32, height as i32);
+        }
     }
 
     /// Ends this frame.
@@ -201,12 +219,22 @@ impl Drawer for GlutinDrawer {
     /// Clears the framebuffer.
     fn clear(&mut self, transparent : bool) {
         unsafe {
-            if transparent {
-                gl::ClearColor(0.0, 0.0, 0.0, 0.0);
-            } else {
-                gl::ClearColor(0.0, 0.0, 0.0, 1.0);
-            }
+            gl::ClearColor(0.0, 0.0, 0.0, 1.0);
             gl::Clear(gl::COLOR_BUFFER_BIT);
+        }
+
+        // Draw our background here, if required
+        if transparent {
+            if self.background.is_some() {
+                let size = Rect::new(0, 0,
+                                         self.get_width() as i32,
+                                         self.get_height() as i32);
+                let tex = self.background.take();
+                let tex = tex.unwrap();
+                self.draw_texture_sized(&tex, &size,
+                                    &Color::new_3byte(255, 255, 255));
+                self.background = Some(tex);
+            }
         }
     }
 
@@ -266,7 +294,10 @@ impl Drawer for GlutinDrawer {
     /// Uses the specified image as a background. This is provided as several platforms
     /// have ways to accelerate this beyond OpenGL calls.
     fn set_background(&mut self, image: DynamicImage) {
-        unimplemented!();
+        println!("Background configuration begin!");
+        let image = GlTexture::from_image(&image.to_rgba());
+        println!("Conversion success.");
+        self.background = Some(image);
     }
 
     /// Sets the brightness of the screen.
@@ -279,11 +310,10 @@ impl Drawer for GlutinDrawer {
 extern "system"
 fn gl_debug_message(_source: u32, _type: u32, _id: u32, _sev: u32,
                     _len: i32, message: *const c_char,
-                    _param: *mut c_void)
-{
+                    _param: *mut c_void) {
     unsafe {
         let s = cstring_to_string(message);
-        panic!("OpenGL Debug message: {}", s);
+        println!("OpenGL Debug message: {}", s);
     }
 }
 
