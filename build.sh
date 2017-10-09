@@ -2,4 +2,4 @@
 . $HOME/.cargo/env
 
 cd frontend
-CARGO_INCREMENTAL=1 cargo build --target armv7-unknown-linux-gnueabihf --release
+CARGO_INCREMENTAL=1 cargo build --target armv7-unknown-linux-gnueabihf --release --features raspberry_pi

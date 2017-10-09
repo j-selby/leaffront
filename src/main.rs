@@ -1,7 +1,15 @@
 extern crate leaffront_core;
-extern crate leaffront_render_pi;
-extern crate leaffront_input_pi;
 extern crate leaffront_weather;
+
+#[cfg(feature = "raspberry_pi")]
+extern crate leaffront_render_pi;
+#[cfg(feature = "raspberry_pi")]
+extern crate leaffront_input_pi;
+
+#[cfg(feature = "glutin")]
+extern crate leaffront_render_glutin;
+#[cfg(feature = "glutin")]
+extern crate leaffront_input_glutin;
 
 #[macro_use]
 extern crate serde_derive;
@@ -34,9 +42,15 @@ use leaffront_core::input::Input;
 
 use leaffront_weather::manager::WeatherManager;
 
-// TODO: Abstract between platforms
-use leaffront_render_pi::drawer::PiDrawer;
-use leaffront_input_pi::PiInput;
+#[cfg(feature = "raspberry_pi")]
+use leaffront_render_pi::drawer::PiDrawer as DrawerImpl;
+#[cfg(feature = "raspberry_pi")]
+use leaffront_input_pi::PiInput as InputImpl;
+
+#[cfg(feature = "glutin")]
+use leaffront_render_glutin::drawer::GlutinDrawer as DrawerImpl;
+#[cfg(feature = "glutin")]
+use leaffront_input_glutin::GlutinInput as InputImpl;
 
 use background::manager::BackgroundManager;
 
@@ -98,10 +112,10 @@ fn main_loop(config : LeaffrontConfig) {
     let watchdog = Watchdog::build();
 
     // Create our mechanism for rendering
-    let mut drawer = PiDrawer::new();
+    let mut drawer = DrawerImpl::new();
 
     // Startup input handling
-    let mut input = PiInput::new();
+    let mut input = InputImpl::new();
 
     // Check the startup time
     let mut state = if check_night(start_night, end_night) {
@@ -121,9 +135,6 @@ fn main_loop(config : LeaffrontConfig) {
     let font_data = include_bytes!("../res/opensans.ttf");
 
     let mut font = FontCache::from_bytes(font_data);
-
-    // Enable on non-videocore platforms
-    //let bg = GlTexture::from_image(&bg_image.to_rgba());
 
     let mut weather_manager =
         WeatherManager::new(config.weather.update_freq * 60 * 1000);
