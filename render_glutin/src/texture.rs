@@ -35,7 +35,7 @@ impl GlTexture {
             gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T,
                                gl::CLAMP_TO_EDGE as gl::types::GLint);
 
-            gl::GenerateMipmap(gl::TEXTURE_2D);
+            //gl::GenerateMipmap(gl::TEXTURE_2D);
         }
 
         return GlTexture {
