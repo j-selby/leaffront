@@ -109,7 +109,7 @@ fn main_loop(config : LeaffrontConfig) {
     let start_night = config.sleep.sleep_hour;
     let end_night = config.sleep.wakeup_hour;
 
-    let watchdog = Watchdog::build();
+    //let watchdog = Watchdog::build();
 
     // Create our mechanism for rendering
     let mut drawer = DrawerImpl::new();
@@ -169,7 +169,7 @@ fn main_loop(config : LeaffrontConfig) {
 
     // TODO: Mechanism to immediately wake up loop
     while running.load(Ordering::SeqCst) {
-        watchdog.ping();
+        //watchdog.ping();
 
         input.update(&drawer);
 

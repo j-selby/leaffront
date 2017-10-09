@@ -4,6 +4,7 @@ use leaffront_core::render::texture::Texture;
 use gl;
 
 use std::mem;
+use std::ptr;
 
 use image::RgbaImage;
 
@@ -36,6 +37,7 @@ impl GlTexture {
                                gl::CLAMP_TO_EDGE as gl::types::GLint);
 
             //gl::GenerateMipmap(gl::TEXTURE_2D);
+            gl::BindTexture(gl::TEXTURE_2D, 0);
         }
 
         return GlTexture {
@@ -73,5 +75,15 @@ impl Dimensions for GlTexture {
     /// Returns the height of this texture.
     fn get_height(&self) -> usize {
         self.height
+    }
+}
+
+impl Drop for GlTexture {
+    fn drop(&mut self) {
+        println!("Dropping image!");
+        unsafe {
+            gl::DeleteTextures(1, [self.ptr].as_ptr());
+        }
+        println!("Dropped!");
     }
 }

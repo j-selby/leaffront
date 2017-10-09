@@ -61,17 +61,39 @@ impl GlutinDrawer {
     /// Changes shaders, and ensures that G is ready to use it.
     fn configure_state(&mut self, target : DrawState) {
         if self.state != target {
-            // TODO: Unbind previous state, if needed
-            // (disable_vertex_attrib_array)
+            // Unbind previous state, if needed
+            match self.state {
+                DrawState::None => {},
+                DrawState::Colored => {
+                    unsafe {
+                        gl::DisableVertexAttribArray(self.attr_colored_vertex as gl::types::GLuint);
+                        gl::DisableVertexAttribArray(self.attr_colored_color as gl::types::GLuint);
+                    }
+                },
+                DrawState::Textured => {
+                    unsafe {
+                        gl::DisableVertexAttribArray(self.attr_textured_uv as gl::types::GLuint);
+                        gl::DisableVertexAttribArray(self.attr_textured_vertex as gl::types::GLuint);
+                        gl::DisableVertexAttribArray(self.attr_textured_color as gl::types::GLuint);
+                    }
+                }
+            }
 
+            // Configure new state
             match target {
                 DrawState::None => {
-                    panic!("Unable to use no draw state!")
+                    unsafe {
+                        gl::UseProgram(0);
+                        gl::BindBuffer(gl::ARRAY_BUFFER, 0);
+                    }
                 }
                 DrawState::Colored => {
                     self.colored.use_program();
 
                     unsafe {
+                        gl::EnableVertexAttribArray(self.attr_colored_vertex as gl::types::GLuint);
+                        gl::EnableVertexAttribArray(self.attr_colored_color as gl::types::GLuint);
+
                         self.vertex.bind();
                         gl::VertexAttribPointer(self.attr_colored_vertex as gl::types::GLuint, 2,
                                                 gl::FLOAT, false as gl::types::GLboolean,
@@ -87,7 +109,11 @@ impl GlutinDrawer {
                     self.textured.use_program();
 
                     unsafe {
-                        gl::ActiveTexture(gl::TEXTURE_2D);
+                        gl::EnableVertexAttribArray(self.attr_textured_uv as gl::types::GLuint);
+                        gl::EnableVertexAttribArray(self.attr_textured_vertex as gl::types::GLuint);
+                        gl::EnableVertexAttribArray(self.attr_textured_color as gl::types::GLuint);
+
+                        gl::ActiveTexture(gl::TEXTURE0);
 
                         self.uv.bind();
                         gl::VertexAttribPointer(self.attr_textured_uv as gl::types::GLuint, 2,
@@ -117,7 +143,8 @@ impl GlutinDrawer {
             .with_title("Leaffront")
             .with_dimensions(1270, 720);
         let context = glutin::ContextBuilder::new()
-            .with_gl_debug_flag(true)
+            .with_gl(glutin::GlRequest::Latest)
+            .with_gl_profile(glutin::GlProfile::Core)
             .with_vsync(true);
         let gl_window = glutin::GlWindow::new(window,
                                               context, &events_loop).unwrap();
@@ -159,10 +186,10 @@ impl GlutinDrawer {
         let attr_colored_vertex = colored_shader.get_attribute("input_vertex");
         let attr_colored_color = colored_shader.get_attribute("input_color");
 
-        unsafe {
+        /*unsafe {
             gl::EnableVertexAttribArray(attr_colored_color as gl::types::GLuint);
             gl::EnableVertexAttribArray(attr_colored_vertex as gl::types::GLuint);
-        }
+        }*/
 
         let textured_shader = GLSLShader::create_shader(
             include_bytes!("../res/shaders/tex.vert"),
@@ -173,11 +200,11 @@ impl GlutinDrawer {
         let attr_textured_color = textured_shader.get_attribute("input_color");
         let attr_textured_uv = textured_shader.get_attribute("input_uv");
 
-        unsafe {
+        /*unsafe {
             gl::EnableVertexAttribArray(attr_textured_color as gl::types::GLuint);
             gl::EnableVertexAttribArray(attr_textured_uv as gl::types::GLuint);
             gl::EnableVertexAttribArray(attr_textured_vertex as gl::types::GLuint);
-        }
+        }*/
 
         GlutinDrawer {
             events_loop,
@@ -213,6 +240,8 @@ impl Drawer for GlutinDrawer {
 
     /// Ends this frame.
     fn end(&mut self) {
+        self.configure_state(DrawState::None);
+
         self.gl_window.swap_buffers().unwrap();
     }
 
@@ -275,7 +304,8 @@ impl Drawer for GlutinDrawer {
         texture.bind_texture(gl::TEXTURE_2D);
 
         unsafe {
-            gl::DrawArrays(gl::TRIANGLE_STRIP, 0, (vertices.len() / 2) as gl::types::GLsizei)
+            gl::DrawArrays(gl::TRIANGLE_STRIP, 0, (vertices.len() / 2) as gl::types::GLsizei);
+            gl::BindTexture(gl::TEXTURE_2D, 0);
         }
     }
 
