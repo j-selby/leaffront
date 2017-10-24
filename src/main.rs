@@ -29,7 +29,7 @@ mod state;
 mod config;
 
 mod background;
-mod watchdog;
+//mod watchdog;
 
 use config::LeaffrontConfig;
 
@@ -56,7 +56,7 @@ use background::manager::BackgroundManager;
 
 use state::ScreenState;
 use state::Message;
-use watchdog::Watchdog;
+//use watchdog::Watchdog;
 
 use clap::{Arg, App};
 
@@ -171,7 +171,11 @@ fn main_loop(config : LeaffrontConfig) {
     while running.load(Ordering::SeqCst) {
         //watchdog.ping();
 
-        input.update(&drawer);
+        input.update(&mut drawer);
+
+        if !input.do_continue() {
+            break
+        }
 
         let touched = input.is_mouse_down();
 
@@ -331,7 +335,6 @@ fn main_loop(config : LeaffrontConfig) {
 
         drawer.end();
         thread::sleep(Duration::from_millis(config.refresh_rate));
-        //drawer.vsync();
     }
 
     println!("Begin shutdown!");

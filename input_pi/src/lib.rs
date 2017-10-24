@@ -31,7 +31,7 @@ impl Input for PiInput {
     type Window = PiDrawer;
 
     /// Updates input
-    fn update(&mut self, _ : &Self::Window) {
+    fn update(&mut self, _ : &mut Self::Window) {
         let mut input = Vec::new();
         for device  in &mut self.devices {
             for evt in  device.events_no_sync().unwrap() {
@@ -54,5 +54,10 @@ impl Input for PiInput {
     /// Checks to see if the mouse/pointer is down
     fn is_mouse_down(&self) -> bool {
         self.mouse_down
+    }
+
+    // No way of telling this
+    fn do_continue(&self) -> bool {
+        true
     }
 }
