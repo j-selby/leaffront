@@ -1,7 +1,11 @@
 [package]
 name = "leaffront"
 version = "0.1.0"
+license = "MIT"
 authors = ["James <jselby@jselby.net>"]
+description = "A simple photoframe for the Raspberry Pi"
+repository = "https://github.com/j-selby/leaffront"
+readme = "README.md"
 
 [dependencies]
 serde = "1.0.14"
@@ -34,3 +38,21 @@ glutin = ["leaffront-render-glutin", "leaffront-input-glutin"]
 members = ["core", "weather",
             "render_pi", "input_pi",
             "render_glutin", "input_glutin"]
+
+[package.metadata.deb]
+features = ["raspberry_pi"]
+maintainer = "James <jselby@jselby.net>"
+copyright = "2017, James <jselby@jselby.net>"
+license-file = ["LICENSE", "0"]
+extended-description = """Leaffront uses DispmanX + OpenGL to provide a simple slideshow, \
+along with basic clock, date and weather information. \
+Most values can be configured, and is lightweight enough that other \
+applications can be run alongside to enhance the experience."""
+depends = "libraspberrypi0, libc6"
+section = "utility"
+priority = "optional"
+assets = [
+    ["target/release/leaffront", "usr/bin/leaffront", "755"],
+    ["example_config.toml", "etc/leaffront/config.toml", "644"],
+    ["res/leaffront.service", "lib/systemd/system/leaffront.service", "644"]
+]

@@ -1,0 +1,15 @@
+[Unit]
+Description=Leaffront
+Documentation=https://github.com/j-selby/leaffront
+After=systemd-user-sessions.service plymouth-quit-wait.service
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/leaffront
+WorkingDirectory=/etc/leaffront
+Type=simple
+Restart=always
+RestartSec=0
+
+[Install]
+WantedBy=getty.target
