@@ -24,7 +24,7 @@ pub struct Context {
     window : Box<Window>,
     pub dispman_display : DisplayHandle,
     pub update : UpdateHandle,
-    element : ElementHandle,
+    pub element : ElementHandle,
 
     pub bg_element : ElementHandle
 }
@@ -192,7 +192,9 @@ impl Context {
         }
 
         // add a vsync/swap interval
-        egl::swap_interval(egl_display, 1);
+        if !egl::swap_interval(egl_display, 1) {
+            return Err("Failed to setup swapping".into());
+        }
 
         Ok(Self {
             config: egl_config,

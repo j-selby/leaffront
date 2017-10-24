@@ -31,8 +31,8 @@ enum DrawState {
 }
 
 pub struct GlutinDrawer {
-    events_loop : glutin::EventsLoop,
-    gl_window : glutin::GlWindow,
+    pub events_loop : glutin::EventsLoop,
+    pub gl_window : glutin::GlWindow,
 
     colored : GLSLShader,
     textured : GLSLShader,
@@ -186,11 +186,6 @@ impl GlutinDrawer {
         let attr_colored_vertex = colored_shader.get_attribute("input_vertex");
         let attr_colored_color = colored_shader.get_attribute("input_color");
 
-        /*unsafe {
-            gl::EnableVertexAttribArray(attr_colored_color as gl::types::GLuint);
-            gl::EnableVertexAttribArray(attr_colored_vertex as gl::types::GLuint);
-        }*/
-
         let textured_shader = GLSLShader::create_shader(
             include_bytes!("../res/shaders/tex.vert"),
             include_bytes!("../res/shaders/tex.frag")).unwrap();
@@ -199,12 +194,6 @@ impl GlutinDrawer {
         let attr_textured_vertex = textured_shader.get_attribute("input_vertex");
         let attr_textured_color = textured_shader.get_attribute("input_color");
         let attr_textured_uv = textured_shader.get_attribute("input_uv");
-
-        /*unsafe {
-            gl::EnableVertexAttribArray(attr_textured_color as gl::types::GLuint);
-            gl::EnableVertexAttribArray(attr_textured_uv as gl::types::GLuint);
-            gl::EnableVertexAttribArray(attr_textured_vertex as gl::types::GLuint);
-        }*/
 
         GlutinDrawer {
             events_loop,

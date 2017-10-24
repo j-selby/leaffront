@@ -65,13 +65,30 @@ impl PiDrawer {
         if self.state != target {
             // TODO: Unbind previous state, if needed
             // (disable_vertex_attrib_array)
+            match self.state {
+                DrawState::None => {},
+                DrawState::Colored => {
+                    gl::disable_vertex_attrib_array(self.attr_colored_vertex as gl::GLuint);
+                    gl::disable_vertex_attrib_array(self.attr_colored_color as gl::GLuint);
+                },
+                DrawState::Textured => {
+                    gl::disable_vertex_attrib_array(self.attr_textured_uv as gl::GLuint);
+                    gl::disable_vertex_attrib_array(self.attr_textured_vertex as gl::GLuint);
+                    gl::disable_vertex_attrib_array(self.attr_textured_color as gl::GLuint);
+                }
+            }
 
+            // Configure new state
             match target {
                 DrawState::None => {
-                    panic!("Unable to use no draw state!")
-                }
+                    gl::use_program(0);
+                    gl::bind_buffer(gl::GL_ARRAY_BUFFER, 0);
+                },
                 DrawState::Colored => {
                     self.colored.use_program();
+
+                    gl::enable_vertex_attrib_array(self.attr_colored_color as gl::GLuint);
+                    gl::enable_vertex_attrib_array(self.attr_colored_vertex as gl::GLuint);
 
                     self.vertex.bind();
                     gl::vertex_attrib_pointer_offset(self.attr_colored_vertex as gl::GLuint, 2,
@@ -83,7 +100,12 @@ impl PiDrawer {
                 },
                 DrawState::Textured => {
                     self.textured.use_program();
-                    gl::active_texture(gl::GL_TEXTURE_2D);
+
+                    gl::enable_vertex_attrib_array(self.attr_textured_color as gl::GLuint);
+                    gl::enable_vertex_attrib_array(self.attr_textured_uv as gl::GLuint);
+                    gl::enable_vertex_attrib_array(self.attr_textured_vertex as gl::GLuint);
+
+                    gl::active_texture(gl::GL_TEXTURE0);
 
                     self.uv.bind();
                     gl::vertex_attrib_pointer_offset(self.attr_textured_uv as gl::GLuint, 2,
@@ -123,9 +145,6 @@ impl PiDrawer {
         let attr_colored_vertex = colored_shader.get_attribute("input_vertex");
         let attr_colored_color = colored_shader.get_attribute("input_color");
 
-        gl::enable_vertex_attrib_array(attr_colored_color as gl::GLuint);
-        gl::enable_vertex_attrib_array(attr_colored_vertex as gl::GLuint);
-
         let textured_shader = GLSLShader::create_shader(
             include_bytes!("../res/shaders/tex.vert"),
             include_bytes!("../res/shaders/tex.frag")).unwrap();
@@ -134,10 +153,6 @@ impl PiDrawer {
         let attr_textured_vertex = textured_shader.get_attribute("input_vertex");
         let attr_textured_color = textured_shader.get_attribute("input_color");
         let attr_textured_uv = textured_shader.get_attribute("input_uv");
-
-        gl::enable_vertex_attrib_array(attr_textured_color as gl::GLuint);
-        gl::enable_vertex_attrib_array(attr_textured_uv as gl::GLuint);
-        gl::enable_vertex_attrib_array(attr_textured_vertex as gl::GLuint);
 
         Self {
             context,
@@ -168,10 +183,7 @@ impl Drawer for PiDrawer {
 
     /// Ends this frame.
     fn end(&mut self) {
-        self.state = DrawState::None;
-
-        gl::use_program(0);
-        gl::bind_buffer(gl::GL_ARRAY_BUFFER, 0);
+        self.configure_state(DrawState::None);
 
         gl::disable(gl::GL_BLEND);
 
