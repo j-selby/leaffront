@@ -1,0 +1,14 @@
+[Unit]
+Description=Leaffront D-Bus Bridge (User)
+Documentation=https://github.com/j-selby/leaffront
+After=dbus.service
+Wants=dbus.service
+
+[Service]
+ExecStart=/usr/bin/leaffront-dbus
+Type=simple
+Restart=always
+RestartSec=0
+
+[Install]
+WantedBy=default.target
