@@ -17,7 +17,7 @@ pipeline {
     }
     stage('Archive') {
       steps {
-        archiveArtifacts 'station/target/**/release/leaffront-station'
+        archiveArtifacts(artifacts: 'station/target/**/release/leaffront-station*', excludes: 'station/target/**/release/leaffront-station.d')
       }
     }
   }
