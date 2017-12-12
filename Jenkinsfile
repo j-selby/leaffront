@@ -34,7 +34,7 @@ pipeline {
         }
         stage('Raspberry Pi') {
           steps {
-            archiveArtifacts 'target/armv7-unknown-linux-gnueabihf/debian/*.deb'
+            archiveArtifacts 'station/target/armv7-unknown-linux-gnueabihf/debian/*.deb'
           }
         }
       }
