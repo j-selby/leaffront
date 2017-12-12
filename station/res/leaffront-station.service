@@ -1,11 +1,11 @@
 [Unit]
-Description=Leaffront
+Description=Leaffront Station
 Documentation=https://github.com/j-selby/leaffront
 After=systemd-user-sessions.service plymouth-quit-wait.service redis.service
 After=network.target
 
 [Service]
-ExecStart=/usr/bin/leaffront
+ExecStart=/usr/bin/leaffront-station
 WorkingDirectory=/etc/leaffront
 Type=simple
 Restart=always
