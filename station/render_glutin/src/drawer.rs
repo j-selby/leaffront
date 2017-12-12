@@ -327,9 +327,7 @@ impl Drawer for GlutinDrawer {
     /// Uses the specified image as a background. This is provided as several platforms
     /// have ways to accelerate this beyond OpenGL calls.
     fn set_background(&mut self, image: DynamicImage) {
-        println!("Background configuration begin!");
         let image = GlTexture::from_image(&image.to_rgba());
-        println!("Conversion success.");
         self.background = Some(image);
     }
 
