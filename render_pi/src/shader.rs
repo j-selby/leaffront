@@ -59,7 +59,6 @@ impl GLSLShader {
 
 impl Drop for GLSLShader {
     fn drop(&mut self) {
-        println!("Unloading shader!");
         gl::delete_program(self.program);
         gl::delete_shader(self.vertex);
         gl::delete_shader(self.fragment);
