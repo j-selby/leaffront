@@ -52,7 +52,7 @@ members = ["core", "weather",
 features = ["raspberry_pi"]
 maintainer = "James <jselby@jselby.net>"
 copyright = "2017, James <jselby@jselby.net>"
-license-file = ["LICENSE", "0"]
+license-file = ["../LICENSE", "0"]
 extended-description = """Leaffront uses DispmanX + OpenGL to provide a simple slideshow, \
 along with basic clock, date and weather information. \
 Most values can be configured, and is lightweight enough that other \
