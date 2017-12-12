@@ -49,11 +49,18 @@ rustup target add armv7-unknown-linux-gnueabihf
 ```
 
 Several dependencies require a generic path to `gcc`, so a few ugly symlink
- are required:
+ *may* be required:
 
 ```bash
 ln -s /usr/bin/arm-linux-gnueabihf-gcc-4.7 /usr/bin/arm-linux-gnueabihf-gcc
 cp -r /usr/include/GL /usr/arm-linux-gnueabihf/include/GL
+```
+
+You are going to want to configure Cargo to find this linker in `~/.cargo/config`:
+
+```toml
+[target.armv7-unknown-linux-gnueabihf]
+linker = "arm-linux-gnueabihf-gcc-4.7"
 ```
 
 Finally, you are going to need access to the Raspberry Pi's OpenGLES/DispmanX/etc
