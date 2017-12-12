@@ -10,6 +10,7 @@ use shader::GLSLShader;
 use vbo::GLVBO;
 
 use leaffront_core::pos::Rect;
+use leaffront_core::version::VersionInfo;
 use leaffront_core::render::color::Color;
 
 use glutin;
@@ -55,12 +56,20 @@ pub struct GlutinDrawer {
     background : Option<GlTexture>,
 
     state : DrawState,
+
+    // Debugging
+    transition_count : usize,
+    calls : usize
 }
 
 impl GlutinDrawer {
     /// Changes shaders, and ensures that G is ready to use it.
     fn configure_state(&mut self, target : DrawState) {
+        self.calls += 1;
+
         if self.state != target {
+            self.transition_count += 1;
+
             // Unbind previous state, if needed
             match self.state {
                 DrawState::None => {},
@@ -209,7 +218,9 @@ impl GlutinDrawer {
             attr_textured_color,
             uv : uv_vbo,
             attr_textured_uv,
-            background : None
+            background : None,
+            transition_count : 0,
+            calls : 0
         }
     }
 }
@@ -218,6 +229,9 @@ impl Drawer for GlutinDrawer {
     type NativeTexture = GlTexture;
 
     fn start(&mut self) {
+        self.calls = 0;
+        self.transition_count = 0;
+
         self.state = DrawState::None;
 
         let (width, height) = self.gl_window.get_inner_size().unwrap();
@@ -323,6 +337,16 @@ impl Drawer for GlutinDrawer {
     fn set_brightness(&mut self, _val: u8) -> ::std::io::Result<()> {
         // NOOP
         Ok(())
+    }
+
+    fn get_transition_count(&self) -> usize {
+        self.transition_count
+    }
+}
+
+impl VersionInfo for GlutinDrawer {
+    fn version() -> String {
+        format!("glutin ({})", env!("CARGO_PKG_VERSION"))
     }
 }
 

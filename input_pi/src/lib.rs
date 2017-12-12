@@ -1,14 +1,18 @@
 extern crate leaffront_core;
 extern crate leaffront_render_pi;
+
 extern crate evdev;
 
 use leaffront_core::input::Input;
-use leaffront_render_pi::drawer::PiDrawer;
+use leaffront_core::version::VersionInfo;
 
+use leaffront_render_pi::drawer::PiDrawer;
 
 /// Implements a basic input mechanism for the Pi through evdev.
 pub struct PiInput {
     devices : Vec<evdev::Device>,
+    mouse_x : usize,
+    mouse_y : usize,
     mouse_down : bool
 }
 
@@ -22,6 +26,8 @@ impl PiInput {
 
         PiInput {
             devices,
+            mouse_x : 0,
+            mouse_y : 0,
             mouse_down : false
         }
     }
@@ -59,5 +65,15 @@ impl Input for PiInput {
     // No way of telling this
     fn do_continue(&self) -> bool {
         true
+    }
+
+    fn get_mouse_pos(&self) -> (usize, usize) {
+        unimplemented!()
+    }
+}
+
+impl VersionInfo for PiInput {
+    fn version() -> String {
+        format!("evdev ({})", env!("CARGO_PKG_VERSION"))
     }
 }

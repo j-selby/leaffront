@@ -29,17 +29,26 @@ leaffront-input-pi = { path = "input_pi", optional = true }
 leaffront-render-glutin = { path = "render_glutin", optional = true }
 leaffront-input-glutin = { path = "input_glutin", optional = true }
 
-[features]
-raspberry_pi = ["leaffront-render-pi", "leaffront-input-pi"]
+leaffront-backend-redis = { path = "backend_redis", optional = true }
+leaffront-backend-null = { path = "backend_null", optional = true }
 
-glutin = ["leaffront-render-glutin", "leaffront-input-glutin"]
+[features]
+# Frontends
+raspberry_pi = ["leaffront-render-pi", "leaffront-input-pi", "redis_backend"]
+glutin = ["leaffront-render-glutin", "leaffront-input-glutin", "null_backend"]
+
+# Backends (shouldn't be accessed directly)
+redis_backend = ["leaffront-backend-redis"]
+null_backend = ["leaffront-backend-null"]
 
 [workspace]
 members = ["core", "weather",
             "render_pi", "input_pi",
-            "render_glutin", "input_glutin"]
+            "render_glutin", "input_glutin",
+            "backend_redis", "backend_null"]
 
 [package.metadata.deb]
+# .deb package for the Raspberry Pi
 features = ["raspberry_pi"]
 maintainer = "James <jselby@jselby.net>"
 copyright = "2017, James <jselby@jselby.net>"
@@ -48,7 +57,7 @@ extended-description = """Leaffront uses DispmanX + OpenGL to provide a simple s
 along with basic clock, date and weather information. \
 Most values can be configured, and is lightweight enough that other \
 applications can be run alongside to enhance the experience."""
-depends = "libraspberrypi0, libc6"
+depends = "libraspberrypi0, libc6, redis-server"
 section = "utility"
 priority = "optional"
 assets = [

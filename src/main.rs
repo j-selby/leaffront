@@ -11,6 +11,12 @@ extern crate leaffront_render_glutin;
 #[cfg(feature = "glutin")]
 extern crate leaffront_input_glutin;
 
+#[cfg(feature = "redis_backend")]
+extern crate leaffront_backend_redis;
+#[cfg(feature = "null_backend")]
+extern crate leaffront_backend_null;
+
+
 #[macro_use]
 extern crate serde_derive;
 extern crate serde;
@@ -29,16 +35,17 @@ mod state;
 mod config;
 
 mod background;
-//mod watchdog;
 
 use config::LeaffrontConfig;
 
+use leaffront_core::backend::Backend;
 use leaffront_core::render::color::Color;
 use leaffront_core::render::font::FontCache;
 use leaffront_core::render::Drawer;
 use leaffront_core::pos::Position;
 use leaffront_core::pos::Rect;
 use leaffront_core::input::Input;
+use leaffront_core::version::VersionInfo;
 
 use leaffront_weather::manager::WeatherManager;
 
@@ -52,11 +59,16 @@ use leaffront_render_glutin::drawer::GlutinDrawer as DrawerImpl;
 #[cfg(feature = "glutin")]
 use leaffront_input_glutin::GlutinInput as InputImpl;
 
+#[cfg(feature = "redis_backend")]
+use leaffront_backend_redis::RedisBackend as BackendImpl;
+#[cfg(feature = "null_backend")]
+use leaffront_backend_null::NullBackend as BackendImpl;
+
 use background::manager::BackgroundManager;
 
 use state::ScreenState;
 use state::Message;
-//use watchdog::Watchdog;
+use state::DisplayNotification;
 
 use clap::{Arg, App};
 
@@ -75,7 +87,7 @@ use std::time::Instant;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
-pub static VERSION : &'static str = "2.0.0";
+const VERSION : &'static str = env!("CARGO_PKG_VERSION");
 
 fn check_night(start_night : u32, end_night : u32) -> bool {
     let time = Local::now();
@@ -109,7 +121,10 @@ fn main_loop(config : LeaffrontConfig) {
     let start_night = config.sleep.sleep_hour;
     let end_night = config.sleep.wakeup_hour;
 
-    //let watchdog = Watchdog::build();
+    // Connect to the backend
+    let mut backend = BackendImpl::new().unwrap();
+
+    let mut notifications = Vec::new();
 
     // Create our mechanism for rendering
     let mut drawer = DrawerImpl::new();
@@ -169,14 +184,27 @@ fn main_loop(config : LeaffrontConfig) {
 
     // TODO: Mechanism to immediately wake up loop
     while running.load(Ordering::SeqCst) {
-        //watchdog.ping();
-
         input.update(&mut drawer);
 
         if !input.do_continue() {
             break
         }
 
+        // Handle incoming notifications
+        match backend.get_notification() {
+            Some(notify) => {
+                println!("Frontend got: {:?}", notify);
+                notifications.push(DisplayNotification::new(notify));
+            }
+            None => {}
+        }
+
+        // Tick notifications
+        // TODO: Config time
+        notifications.retain(|ref x|
+            x.displayed.elapsed() < Duration::from_secs(5));
+
+        // Handle the adjustment of state
         let touched = input.is_mouse_down();
 
         let next_img = bg_mgr.get_next();
@@ -229,6 +257,7 @@ fn main_loop(config : LeaffrontConfig) {
             None => {}
         }
 
+        // Begin render
         drawer.start();
         let screen_width = drawer.get_width() as i32;
         let screen_height = drawer.get_height() as i32;
@@ -331,8 +360,29 @@ fn main_loop(config : LeaffrontConfig) {
             }
         }
 
+        // Draw notifications
+        let mut y = 50;
+        let x = drawer.get_width() as i32 - 300 - 50;
+        for notification in &notifications {
+            drawer.draw_colored_rect(&Rect::new(x, y, 300, 100),
+                                     &Color::new_4byte(0, 0, 0, 170));
+            font.draw(&notification.source.name, &Color::new_3byte(255, 255, 255),
+                      30, &Position::new(x + 10, y + 20), &mut drawer);
+            font.draw(&notification.source.contents, &Color::new_3byte(255, 255, 255),
+                      20, &Position::new(x + 10, y + 40), &mut drawer);
+            y += 120;
+        }
+
+        /*let (mouse_x, mouse_y) = input.get_mouse_pos();
+        drawer.draw_colored_rect(&Rect::new(mouse_x as i32 - 5, mouse_y as i32 - 5,
+                                           10, 10),
+                                 &Color::new_3byte(255, 255, 255));*/
 
 
+        // TODO: Enable debugging
+        /*font.draw(&format!("Transitions: {}", drawer.get_transition_count()),
+                  &Color::new_3byte(255, 255, 255),
+                  20, &Position::new(50, 50), &mut drawer);*/
         drawer.end();
         thread::sleep(Duration::from_millis(config.refresh_rate));
     }
@@ -357,7 +407,20 @@ fn main() {
             .value_name("FILE")
             .required(false)
             .takes_value(true))
+        .arg(Arg::with_name("version")
+            .short("v")
+            .long("version")
+            .help("Shows version information and exits.")
+            .required(false))
         .get_matches();
+
+    if matches.is_present("version") {
+        println!("Leaffront {}", VERSION);
+        println!("Backend: {:?}", BackendImpl::version());
+        println!("Input: {:?}", InputImpl::version());
+        println!("Renderer: {:?}", DrawerImpl::version());
+        return;
+    }
 
     let config_file = matches.value_of("config").unwrap_or("config.toml");
 
