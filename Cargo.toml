@@ -45,7 +45,8 @@ null_backend = ["leaffront-backend-null"]
 members = ["core", "weather",
             "render_pi", "input_pi",
             "render_glutin", "input_glutin",
-            "backend_redis", "backend_null"]
+            "backend_redis", "backend_null",
+            "dbus"]
 
 [package.metadata.deb]
 # .deb package for the Raspberry Pi
