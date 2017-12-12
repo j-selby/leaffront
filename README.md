@@ -28,6 +28,9 @@ Two things (other then the application binary) are required to run Leaffront
    Leaffront will only display a blank screen.
 - A `config.toml` file. An example can be found [here](example_config.toml).
 
+If you want to use Redis for notifications, you also going to need this installed
+ and running. This can be found in the Debian package `redis-server`.
+
 Cross-compilation (for the Raspberry Pi)
 ----------------------------------------
 
