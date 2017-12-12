@@ -6,9 +6,9 @@ pipeline {
         sh 'cd station && cargo build --release --features glutin'
       }
     }
-    stage('') {
+    stage('Archive') {
       steps {
-        archiveArtifacts 'target/release/leaffront-station'
+        archiveArtifacts 'station/target/release/leaffront-station'
       }
     }
   }
