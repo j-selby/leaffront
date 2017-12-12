@@ -61,7 +61,7 @@ depends = "libraspberrypi0, libc6, redis-server"
 section = "utility"
 priority = "optional"
 assets = [
-    ["target/release/leaffront", "usr/bin/leaffront", "755"],
+    ["target/release/leaffront-station", "usr/bin/leaffront-station", "755"],
     ["example_config.toml", "etc/leaffront/config.toml", "644"],
-    ["res/leaffront.service", "lib/systemd/system/leaffront.service", "644"]
+    ["res/leaffront-station.service", "lib/systemd/system/leaffront-station.service", "644"]
 ]
