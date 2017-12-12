@@ -13,7 +13,8 @@ Building the application should be fairly simple as long as you are compiling
  on the target platform.
 
 ```bash
-cargo build --bin leaffront --features glutin
+cd station
+cargo build --features glutin
 ```
 
 Replace `glutin` with your preferred frontend.
@@ -60,8 +61,8 @@ Finally, you are going to need access to the Raspberry Pi's OpenGLES/DispmanX/et
  the location which will be assumed from here on. These artifacts can also
  be found here (as of writing): <https://github.com/raspberrypi/firmware/tree/master/opt/vc/lib>
 
-The supplied `build.sh` script will automatically invoke Cargo, strip the 
- build artifact, and package it into a .deb file targeting
+The supplied `station/build.sh` script will automatically invoke Cargo, strip
+ the build artifact, and package it into a .deb file targeting
  `armv7-unknown-linux-gnueabihf`.
 
 As Leaffront directly uses the the hardware video scaler and OpenGLES,
