@@ -79,10 +79,8 @@ impl Dimensions for GlTexture {
 
 impl Drop for GlTexture {
     fn drop(&mut self) {
-        println!("Dropping image!");
         unsafe {
             gl::DeleteTextures(1, [self.ptr].as_ptr());
         }
-        println!("Dropped!");
     }
 }

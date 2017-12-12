@@ -110,7 +110,6 @@ impl GLSLShader {
 
 impl Drop for GLSLShader {
     fn drop(&mut self) {
-        println!("Unloading shader!");
         unsafe {
             gl::DeleteProgram(self.program);
             gl::DeleteShader(self.vertex);
