@@ -4,7 +4,7 @@ Leaffront
 A weather station and notification synchronisation platform, designed to run
  pretty much anywhere. Targeted at the Raspberry Pi.
  
-![Splash]()
+![Splash](example.jpg)
 
 Building
 --------
