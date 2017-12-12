@@ -65,7 +65,7 @@ impl RedisBackend {
 
 impl VersionInfo for RedisBackend {
     fn version() -> String {
-        format!("redis {} ({})", env!("CARGO_PKG_VERSION"))
+        format!("redis ({})", env!("CARGO_PKG_VERSION"))
     }
 }
 
