@@ -185,7 +185,7 @@ impl WeatherProvider for BOM {
         }
 
         // Strip out '&deg;' entities (XML parser doesn't like them)
-        new_temps = new_temps.replace("&deg;", "");
+        new_temps = new_temps.replace("&deg;", "").replace("&nbsp;", " ");
 
         // Now, attempt to parse that
         let live_temps = new_temps.into_bytes();

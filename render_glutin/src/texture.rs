@@ -4,7 +4,6 @@ use leaffront_core::render::texture::Texture;
 use gl;
 
 use std::mem;
-use std::ptr;
 
 use image::RgbaImage;
 

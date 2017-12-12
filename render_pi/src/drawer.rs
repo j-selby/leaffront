@@ -23,6 +23,7 @@ use vbo::GLVBO;
 use texture::GlTexture;
 
 use leaffront_core::render::Drawer;
+use leaffront_core::version::VersionInfo;
 use leaffront_core::render::texture::Texture;
 
 #[derive(Ord, PartialOrd, Eq, PartialEq)]
@@ -56,13 +57,18 @@ pub struct PiDrawer {
 
     context : Context,
 
-    bg : Option<ResourceHandle>
+    bg : Option<ResourceHandle>,
+
+    // Debugging information
+    transitions : usize
 }
 
 impl PiDrawer {
     /// Changes shaders, and ensures that GLES is ready to use it.
     fn configure_state(&mut self, target : DrawState) {
         if self.state != target {
+            self.transitions += 1;
+
             // TODO: Unbind previous state, if needed
             // (disable_vertex_attrib_array)
             match self.state {
@@ -168,7 +174,8 @@ impl PiDrawer {
             attr_textured_color,
             uv       : uv_vbo,
             attr_textured_uv,
-            bg       : None
+            bg       : None,
+            transitions : 0
         }
     }
 }
@@ -177,6 +184,7 @@ impl Drawer for PiDrawer {
     type NativeTexture = GlTexture;
 
     fn start(&mut self) {
+        self.transitions = 0;
         self.size = Context::get_resolution();
         self.state = DrawState::None;
     }
@@ -357,6 +365,16 @@ impl Drawer for PiDrawer {
     /// Sets the brightness of the screen.
     fn set_brightness(&mut self, val: u8) -> ::std::io::Result<()> {
         set_brightness(val)
+    }
+
+    fn get_transition_count(&self) -> usize {
+        self.transitions
+    }
+}
+
+impl VersionInfo for PiDrawer {
+    fn version() -> String {
+        format!("opengles + dispmanx ({})", env!("CARGO_PKG_VERSION"))
     }
 }
 

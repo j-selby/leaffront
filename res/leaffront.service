@@ -1,7 +1,7 @@
 [Unit]
 Description=Leaffront
 Documentation=https://github.com/j-selby/leaffront
-After=systemd-user-sessions.service plymouth-quit-wait.service
+After=systemd-user-sessions.service plymouth-quit-wait.service redis.service
 After=network.target
 
 [Service]

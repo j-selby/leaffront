@@ -61,6 +61,9 @@ pub trait Drawer {
     /// Draws a set of colored vertices to the screen, with a specified color array.
     fn draw_colored_vertices(&mut self, vertices : &[f32], colors : &[f32]);
 
+    /// Returns the count of transitions that occured so far in this frame.
+    fn get_transition_count(&self) -> usize;
+
     /// Draws a texture to the screen, with a specified set of vertices to draw to, and a color
     /// to use as a base.
     fn draw_textured_vertices_colored(&mut self, texture : &Self::NativeTexture, vertices : &[f32],
