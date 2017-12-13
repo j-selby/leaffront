@@ -1,6 +1,8 @@
 Leaffront
 =========
 
+[![Build Status](https://ci.jselby.net/job/leaffront/job/master/badge/icon)](https://ci.jselby.net/job/leaffront/job/master/)
+
 A weather station and notification synchronisation platform, designed to run
  pretty much anywhere. Targeted at the Raspberry Pi.
  
