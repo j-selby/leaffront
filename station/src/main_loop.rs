@@ -61,7 +61,10 @@ pub fn main_loop(config : LeaffrontConfig) {
         ScreenState::Day(_) => config.day.brightness,
         ScreenState::Night => config.night.brightness,
     };
-    drawer.set_brightness(brightness).unwrap();
+    match drawer.set_brightness(brightness) {
+        Err(v) => println!("Failed to set brightness: {:?}", v),
+        _ => {}
+    }
 
     let mut state_countdown = Instant::now();
 
@@ -168,7 +171,10 @@ pub fn main_loop(config : LeaffrontConfig) {
                     ScreenState::Day(_) => config.day.brightness,
                     ScreenState::Night => config.night.brightness,
                 };
-                drawer.set_brightness(brightness).unwrap();
+                match drawer.set_brightness(brightness) {
+                    Err(v) => println!("Failed to set brightness: {:?}", v),
+                    _ => {}
+                }
             }
             None => {}
         }
