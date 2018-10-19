@@ -349,9 +349,13 @@ impl VersionInfo for GlutinDrawer {
 }
 
 extern "system"
-fn gl_debug_message(_source: u32, _type: u32, _id: u32, _sev: u32,
+fn gl_debug_message(_source: u32, _type: u32, _id: u32, sev: u32,
                     _len: i32, message: *const c_char,
                     _param: *mut c_void) {
+    if sev < gl::DEBUG_SEVERITY_MEDIUM {
+        return;
+    }
+
     unsafe {
         let s = cstring_to_string(message);
         println!("OpenGL Debug message: {}", s);

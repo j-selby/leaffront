@@ -68,7 +68,7 @@ pub fn main_loop(config : LeaffrontConfig) {
 
     let mut state_countdown = Instant::now();
 
-    let font_data = include_bytes!("../res/opensans.ttf");
+    let font_data = include_bytes!("../res/Lato-Regular.ttf");
 
     let mut font = FontCache::from_bytes(font_data);
 
@@ -136,6 +136,10 @@ pub fn main_loop(config : LeaffrontConfig) {
 
         let next_state = match &state {
             &ScreenState::Day(ref msg) => {
+                if touched {
+                    night_cooldown = Instant::now();
+                }
+
                 if bg_countdown.elapsed() > Duration::from_secs(config.day.background_secs) {
                     bg_countdown = Instant::now();
                     bg_mgr.next();

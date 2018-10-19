@@ -35,16 +35,16 @@ impl Input for GlutinInput {
     fn update(&mut self, window: &mut Self::Window) {
         let events = &mut window.events_loop;
         let window = &window.gl_window;
-        // TODO: Fix this!
-        /*events.poll_events(|event| {
+
+        events.poll_events(|event| {
             match event {
                 glutin::Event::WindowEvent{ event, .. } => match event {
-                    glutin::WindowEvent::Closed => self.running = false,
+                    glutin::WindowEvent::CloseRequested => self.running = false,
                     glutin::WindowEvent::Resized(w, h) => window.resize(w, h),
-                    glutin::WindowEvent::MouseInput {device_id, state, button} => {
+                    glutin::WindowEvent::MouseInput {state, ..} => {
                         self.mouse_down = state == glutin::ElementState::Pressed;
                     },
-                    glutin::WindowEvent::MouseMoved {device_id, position} => {
+                    glutin::WindowEvent::CursorMoved {position, ..} => {
                         let (x, y) = position;
                         self.mouse_x = x as usize;
                         self.mouse_y = y as usize;
@@ -54,7 +54,7 @@ impl Input for GlutinInput {
 
                 _ => ()
             }
-        });*/
+        });
     }
 
     /// Checks to see if the mouse/pointer is down

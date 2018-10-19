@@ -2,6 +2,7 @@
 name = "leaffront-dbus"
 version = "0.1.0"
 authors = ["James <jselby@jselby.net>"]
+workspace = ".."
 
 [dependencies]
 notify-rust = "3.4.2"
