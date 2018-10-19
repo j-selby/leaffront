@@ -11,8 +11,8 @@ use notify_rust::server::NotificationServer;
 
 #[derive(Serialize, Deserialize)]
 pub struct Notification {
-    name : String,
-    contents : String
+    name: String,
+    contents: String,
 }
 
 fn main() {
@@ -23,13 +23,13 @@ fn main() {
 
     println!("Ready!");
 
-    server.start(| ref notify | {
+    server.start(|ref notify| {
         let notification = Notification {
-            name : notify.appname.to_owned(),
-            contents : notify.body.to_owned()
+            name: notify.appname.to_owned(),
+            contents: notify.body.to_owned(),
         };
-        let v : String = serde_json::to_string(&notification).unwrap();
-        let k : &str = "leaffront.notify";
+        let v: String = serde_json::to_string(&notification).unwrap();
+        let k: &str = "leaffront.notify";
 
         redis::cmd("PUBLISH").arg(k).arg(&v).execute(&sub);
     });

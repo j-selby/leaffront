@@ -1,7 +1,7 @@
 #[derive(Debug)]
 pub struct Notification {
-    pub name : String,
-    pub contents : String
+    pub name: String,
+    pub contents: String,
 }
 
 pub trait Backend {

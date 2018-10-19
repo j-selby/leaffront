@@ -10,10 +10,10 @@ use leaffront_render_pi::drawer::PiDrawer;
 
 /// Implements a basic input mechanism for the Pi through evdev.
 pub struct PiInput {
-    devices : Vec<evdev::Device>,
-    mouse_x : usize,
-    mouse_y : usize,
-    mouse_down : bool
+    devices: Vec<evdev::Device>,
+    mouse_x: usize,
+    mouse_y: usize,
+    mouse_down: bool,
 }
 
 impl PiInput {
@@ -26,9 +26,9 @@ impl PiInput {
 
         PiInput {
             devices,
-            mouse_x : 0,
-            mouse_y : 0,
-            mouse_down : false
+            mouse_x: 0,
+            mouse_y: 0,
+            mouse_down: false,
         }
     }
 }
@@ -37,10 +37,10 @@ impl Input for PiInput {
     type Window = PiDrawer;
 
     /// Updates input
-    fn update(&mut self, _ : &mut Self::Window) {
+    fn update(&mut self, _: &mut Self::Window) {
         let mut input = Vec::new();
-        for device  in &mut self.devices {
-            for evt in  device.events_no_sync().unwrap() {
+        for device in &mut self.devices {
+            for evt in device.events_no_sync().unwrap() {
                 input.push(evt);
             }
         }

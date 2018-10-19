@@ -1,11 +1,10 @@
 /// Holds and parses GLSL shaders.
-
 use opengles::glesv2 as gl;
 
 pub struct GLSLShader {
-    program : gl::GLuint,
-    vertex : gl::GLuint,
-    fragment : gl::GLuint,
+    program: gl::GLuint,
+    vertex: gl::GLuint,
+    fragment: gl::GLuint,
 }
 
 impl GLSLShader {
@@ -17,13 +16,13 @@ impl GLSLShader {
 
     /// Enables this program to be used.
     /// Shader MUST remain in scope for duration of usage.
-    pub fn get_attribute(&self, name : &str) -> gl::GLint {
+    pub fn get_attribute(&self, name: &str) -> gl::GLint {
         gl::get_attrib_location(self.program, name)
     }
 
     /// Creates a new shader.
     /// Returns: Shader if compile succeeded, msg if failed.
-    pub fn create_shader(vertex : &[u8], frag : &[u8]) -> Result<GLSLShader, String> {
+    pub fn create_shader(vertex: &[u8], frag: &[u8]) -> Result<GLSLShader, String> {
         // Create our shader program
         let program = gl::create_program();
 
@@ -50,9 +49,9 @@ impl GLSLShader {
             Some(msg) => Err(msg),
             None => Ok(GLSLShader {
                 program,
-                vertex : vert_shader,
-                fragment : frag_shader
-            })
+                vertex: vert_shader,
+                fragment: frag_shader,
+            }),
         }
     }
 }

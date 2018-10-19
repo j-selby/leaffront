@@ -1,24 +1,24 @@
 use leaffront_core::backend::Backend;
+use leaffront_core::input::Input;
+use leaffront_core::pos::Position;
+use leaffront_core::pos::Rect;
 use leaffront_core::render::color::Color;
 use leaffront_core::render::font::FontCache;
 use leaffront_core::render::Drawer;
-use leaffront_core::pos::Position;
-use leaffront_core::pos::Rect;
-use leaffront_core::input::Input;
 
 use leaffront_weather::manager::WeatherManager;
 
 use background::manager::BackgroundManager;
 
-use state::ScreenState;
-use state::Message;
 use state::DisplayNotification;
+use state::Message;
+use state::ScreenState;
 
-use chrono::Local;
 use chrono::Datelike;
+use chrono::Local;
 
-use rand::Rng;
 use rand::thread_rng;
+use rand::Rng;
 
 use std::thread;
 use std::time::Duration;
@@ -35,7 +35,7 @@ use platform::*;
 
 use ctrlc;
 
-pub fn main_loop(config : LeaffrontConfig) {
+pub fn main_loop(config: LeaffrontConfig) {
     let start_night = config.sleep.sleep_hour;
     let end_night = config.sleep.wakeup_hour;
 
@@ -72,8 +72,7 @@ pub fn main_loop(config : LeaffrontConfig) {
 
     let mut font = FontCache::from_bytes(font_data);
 
-    let mut weather_manager =
-        WeatherManager::new(config.weather.update_freq * 60 * 1000);
+    let mut weather_manager = WeatherManager::new(config.weather.update_freq * 60 * 1000);
 
     let mut rng = thread_rng();
     let mut night_x = -1;
@@ -107,7 +106,7 @@ pub fn main_loop(config : LeaffrontConfig) {
         input.update(&mut drawer);
 
         if !input.do_continue() {
-            break
+            break;
         }
 
         // Handle incoming notifications
@@ -120,8 +119,7 @@ pub fn main_loop(config : LeaffrontConfig) {
 
         // Tick notifications
         // TODO: Config time
-        notifications.retain(|ref x|
-            x.displayed.elapsed() < Duration::from_secs(5));
+        notifications.retain(|ref x| x.displayed.elapsed() < Duration::from_secs(5));
 
         // Handle the adjustment of state
         let touched = input.is_mouse_down();
@@ -145,17 +143,19 @@ pub fn main_loop(config : LeaffrontConfig) {
                     bg_mgr.next();
                 }
 
-                if night_cooldown.elapsed() > Duration::from_secs(config.night.night_tap_cooldown) &&
-                    check_night(start_night, end_night) {
+                if night_cooldown.elapsed() > Duration::from_secs(config.night.night_tap_cooldown)
+                    && check_night(start_night, end_night)
+                {
                     state_countdown = Instant::now();
                     Some(ScreenState::Night)
-                } else if state_countdown.elapsed() > Duration::from_secs(config.day.subtitle_secs) {
+                } else if state_countdown.elapsed() > Duration::from_secs(config.day.subtitle_secs)
+                {
                     state_countdown = Instant::now();
                     Some(ScreenState::Day(msg.next()))
                 } else {
                     None
                 }
-            },
+            }
             &ScreenState::Night => {
                 if touched {
                     night_cooldown = Instant::now();
@@ -193,15 +193,22 @@ pub fn main_loop(config : LeaffrontConfig) {
                 drawer.clear(true);
                 drawer.enable_blending();
 
-                drawer.draw_colored_rect(&Rect::new(0, screen_height - 120, screen_width, 120),
-                                         &Color::new_4byte(0, 0, 0, 170));
+                drawer.draw_colored_rect(
+                    &Rect::new(0, screen_height - 120, screen_width, 120),
+                    &Color::new_4byte(0, 0, 0, 170),
+                );
 
                 let datetime = Local::now();
                 let time = datetime.format("%-I:%M:%S %P").to_string();
                 let msg = format!("{}", time);
 
-                font.draw(&msg,  &Color::new_3byte(255, 255, 255),
-                          50, &Position::new(20, screen_height - 75), &mut drawer);
+                font.draw(
+                    &msg,
+                    &Color::new_3byte(255, 255, 255),
+                    50,
+                    &Position::new(20, screen_height - 75),
+                    &mut drawer,
+                );
 
                 match subtitle {
                     &Message::Date => {
@@ -212,25 +219,40 @@ pub fn main_loop(config : LeaffrontConfig) {
                             _ => "th",
                         };
 
-                        let msg = format!("{}{} of {}", datetime.format("%A, %-d").to_string(), suffix,
-                                          datetime.format("%B").to_string());
+                        let msg = format!(
+                            "{}{} of {}",
+                            datetime.format("%A, %-d").to_string(),
+                            suffix,
+                            datetime.format("%B").to_string()
+                        );
 
-                        font.draw(&msg,  &Color::new_3byte(255, 255, 255),
-                                  50, &Position::new(20, screen_height - 25), &mut drawer);
-                    },
+                        font.draw(
+                            &msg,
+                            &Color::new_3byte(255, 255, 255),
+                            50,
+                            &Position::new(20, screen_height - 25),
+                            &mut drawer,
+                        );
+                    }
                     &Message::Weather => {
                         let weather = weather_manager.get();
-                        let msg =
-                            match weather {
-                                Ok(weather) => format!("{}°C - {}", weather.temperature, weather.description),
-                                Err(msg) => msg
-                            };
+                        let msg = match weather {
+                            Ok(weather) => {
+                                format!("{}°C - {}", weather.temperature, weather.description)
+                            }
+                            Err(msg) => msg,
+                        };
 
-                        font.draw(&msg,  &Color::new_3byte(255, 255, 255),
-                                  50, &Position::new(20, screen_height - 25), &mut drawer);
+                        font.draw(
+                            &msg,
+                            &Color::new_3byte(255, 255, 255),
+                            50,
+                            &Position::new(20, screen_height - 25),
+                            &mut drawer,
+                        );
                     }
                 }
-            },
+            }
             &ScreenState::Night => {
                 drawer.clear(false);
 
@@ -247,18 +269,27 @@ pub fn main_loop(config : LeaffrontConfig) {
                     _ => "th",
                 };
 
-                let bottom_msg = format!("{}{} of {}", datetime.format("%A, %-d").to_string(), suffix,
-                                         datetime.format("%B").to_string());
+                let bottom_msg = format!(
+                    "{}{} of {}",
+                    datetime.format("%A, %-d").to_string(),
+                    suffix,
+                    datetime.format("%B").to_string()
+                );
                 let bottom_length = font.get_width(&bottom_msg, 50);
                 let bottom_two = bottom_length / 2;
 
                 if state_countdown.elapsed() > Duration::from_secs(config.night.move_secs)
-                    || night_x == -1  {
+                    || night_x == -1
+                {
                     state_countdown = Instant::now();
 
                     // Set new random position
                     // Calculate maximum ranges
-                    let max_width = if top_two > bottom_two { top_two } else { bottom_two };
+                    let max_width = if top_two > bottom_two {
+                        top_two
+                    } else {
+                        bottom_two
+                    };
                     let max_x = screen_width - max_width;
                     let min_x = max_width;
 
@@ -267,7 +298,6 @@ pub fn main_loop(config : LeaffrontConfig) {
 
                     night_x = rng.gen_range(min_x, max_x);
                     night_y = rng.gen_range(min_y, max_y);
-
                 }
 
                 let top_x = night_x - top_two;
@@ -275,10 +305,20 @@ pub fn main_loop(config : LeaffrontConfig) {
 
                 drawer.enable_blending();
 
-                font.draw(&top_msg,  &Color::new_3byte(255, 255, 255),
-                          50, &Position::new(top_x, night_y), &mut drawer);
-                font.draw(&bottom_msg,  &Color::new_3byte(255, 255, 255),
-                          50, &Position::new(bottom_x, night_y + 50), &mut drawer);
+                font.draw(
+                    &top_msg,
+                    &Color::new_3byte(255, 255, 255),
+                    50,
+                    &Position::new(top_x, night_y),
+                    &mut drawer,
+                );
+                font.draw(
+                    &bottom_msg,
+                    &Color::new_3byte(255, 255, 255),
+                    50,
+                    &Position::new(bottom_x, night_y + 50),
+                    &mut drawer,
+                );
             }
         }
 
@@ -286,12 +326,21 @@ pub fn main_loop(config : LeaffrontConfig) {
         let mut y = 50;
         let x = drawer.get_width() as i32 - 300 - 50;
         for notification in &notifications {
-            drawer.draw_colored_rect(&Rect::new(x, y, 300, 100),
-                                     &Color::new_4byte(0, 0, 0, 170));
-            font.draw(&notification.source.name, &Color::new_3byte(255, 255, 255),
-                      30, &Position::new(x + 10, y + 20), &mut drawer);
-            font.draw(&notification.source.contents, &Color::new_3byte(255, 255, 255),
-                      20, &Position::new(x + 10, y + 40), &mut drawer);
+            drawer.draw_colored_rect(&Rect::new(x, y, 300, 100), &Color::new_4byte(0, 0, 0, 170));
+            font.draw(
+                &notification.source.name,
+                &Color::new_3byte(255, 255, 255),
+                30,
+                &Position::new(x + 10, y + 20),
+                &mut drawer,
+            );
+            font.draw(
+                &notification.source.contents,
+                &Color::new_3byte(255, 255, 255),
+                20,
+                &Position::new(x + 10, y + 40),
+                &mut drawer,
+            );
             y += 120;
         }
 
