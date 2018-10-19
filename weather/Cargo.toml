@@ -4,5 +4,5 @@ version = "0.1.0"
 authors = ["James <jselby@jselby.net>"]
 
 [dependencies]
-ftp = "2.2.1"
-xmltree = "0.4.0"
+ftp = "3.0.1"
+xmltree = "0.8.0"

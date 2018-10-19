@@ -6,6 +6,6 @@ authors = ["James <jselby@jselby.net>"]
 [dependencies]
 leaffront-core = { path = "../core" }
 
-json = "0.11.12"
+json = "0.11.13"
 
 redis = "0.8.0"
