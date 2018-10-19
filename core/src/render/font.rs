@@ -104,7 +104,8 @@ impl<'a, T : Dimensions> FontCache<'a, T> {
 
     /// Creates a new cache from a .ttf file.
     pub fn from_bytes(data : &'a [u8]) -> Self {
-        let collection = FontCollection::from_bytes(data);
+        let collection = FontCollection::from_bytes(data)
+            .expect("Failed to read font");
 
         // only succeeds if collection consists of one font
         let font = collection.into_font().unwrap();

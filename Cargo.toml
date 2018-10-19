@@ -8,17 +8,17 @@ repository = "https://github.com/j-selby/leaffront"
 readme = "README.md"
 
 [dependencies]
-serde = "1.0.14"
-serde_derive = "1.0.14"
-toml = "0.4.5"
-clap = "2.26.0"
+serde = "1.0"
+serde_derive = "1.0"
+toml = "0.4.8"
+clap = "2.32.0"
 
-chrono = "0.4.0"
+chrono = "0.4.6"
 
-ctrlc = "3.0"
+ctrlc = "3.1.1"
 
-image = "0.15.0"
-rand = "0.3.16"
+image = "0.20.0"
+rand = "0.5.5"
 
 leaffront-core = { path = "core" }
 leaffront-weather = { path = "weather" }

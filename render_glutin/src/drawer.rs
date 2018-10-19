@@ -15,6 +15,7 @@ use leaffront_core::render::color::Color;
 
 use glutin;
 use glutin::GlContext;
+use glutin::dpi::LogicalSize;
 
 use gl;
 
@@ -150,7 +151,7 @@ impl GlutinDrawer {
         let events_loop = glutin::EventsLoop::new();
         let window = glutin::WindowBuilder::new()
             .with_title("Leaffront")
-            .with_dimensions(1270, 720);
+            .with_dimensions(LogicalSize::new(1270.0, 720.0));
         let context = glutin::ContextBuilder::new()
             .with_gl(glutin::GlRequest::Latest)
             .with_gl_profile(glutin::GlProfile::Core)
@@ -162,7 +163,9 @@ impl GlutinDrawer {
             gl_window.make_current().unwrap();
         }
 
-        let (width, height) = gl_window.get_inner_size().unwrap();
+        let (width, height) : (u32, u32) = gl_window.get_inner_size()
+            .expect("Failed to get size of current window")
+            .into();
 
         unsafe {
             gl::load_with(|symbol| gl_window.get_proc_address(symbol) as *const _);
@@ -234,7 +237,9 @@ impl Drawer for GlutinDrawer {
 
         self.state = DrawState::None;
 
-        let (width, height) = self.gl_window.get_inner_size().unwrap();
+        let (width, height) : (u32, u32) = self.gl_window.get_inner_size()
+            .expect("Failed to get size of current window")
+            .into();
 
         unsafe {
             gl::Viewport(0, 0, width as i32, height as i32);
@@ -284,13 +289,19 @@ impl Drawer for GlutinDrawer {
 
     /// Returns the width of the screen.
     fn get_width(&self) -> usize {
-        let (width, _) = self.gl_window.get_inner_size().unwrap();
+        let (width, _) : (u32, u32) = self.gl_window.get_inner_size()
+            .expect("Failed to get size of current window")
+            .into();
+
         width as usize
     }
 
     /// Returns the height of the screen.
     fn get_height(&self) -> usize {
-        let (_, height) = self.gl_window.get_inner_size().unwrap();
+        let (_, height) : (u32, u32) = self.gl_window.get_inner_size()
+            .expect("Failed to get size of current window")
+            .into();
+
         height as usize
     }
 
