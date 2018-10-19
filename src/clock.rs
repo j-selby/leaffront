@@ -1,10 +1,9 @@
-/// Functions to help with time of day functionality.
-
-use chrono::Local;
 use chrono::naive::NaiveTime;
 use chrono::Duration as cDuration;
+/// Functions to help with time of day functionality.
+use chrono::Local;
 
-pub fn check_night(start_night : u32, end_night : u32) -> bool {
+pub fn check_night(start_night: u32, end_night: u32) -> bool {
     let time = Local::now();
     let start_time = NaiveTime::from_hms(start_night, 0, 0);
     let end_time = NaiveTime::from_hms(end_night, 0, 0);

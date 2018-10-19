@@ -1,14 +1,13 @@
 /// Manages the configuration of a Raspberry Pi to get a GLES context.
-
 // Code from https://github.com/seankerr/rust-rpi-examples
-
 use egl;
 use egl::{EGLConfig, EGLContext, EGLDisplay, EGLNativeDisplayType, EGLSurface};
 
 use videocore::bcm_host;
 use videocore::dispmanx;
-use videocore::dispmanx::{FlagsAlpha, Transform, VCAlpha, Window, DisplayHandle, UpdateHandle,
-                            ElementHandle};
+use videocore::dispmanx::{
+    DisplayHandle, ElementHandle, FlagsAlpha, Transform, UpdateHandle, VCAlpha, Window,
+};
 use videocore::image::Rect;
 
 use videocore::bcm_host::GraphicsDisplaySize;
@@ -16,17 +15,17 @@ use videocore::bcm_host::GraphicsDisplaySize;
 use std::ptr;
 
 pub struct Context {
-    pub config:  EGLConfig,
+    pub config: EGLConfig,
     pub context: EGLContext,
     pub display: EGLDisplay,
     pub surface: EGLSurface,
 
-    window : Box<Window>,
-    pub dispman_display : DisplayHandle,
-    pub update : UpdateHandle,
-    pub element : ElementHandle,
+    window: Box<Window>,
+    pub dispman_display: DisplayHandle,
+    pub update: UpdateHandle,
+    pub element: ElementHandle,
 
-    pub bg_element : ElementHandle
+    pub bg_element: ElementHandle,
 }
 
 impl Context {
@@ -51,10 +50,10 @@ impl Context {
         let update = dispmanx::update_start(0);
 
         // get screen resolution (same display number as display_open()
-        let dimensions : Result<GraphicsDisplaySize, String> =
+        let dimensions: Result<GraphicsDisplaySize, String> =
             match bcm_host::graphics_get_display_size(0) {
                 Some(x) => Ok(x),
-                None => Err("bcm_host::init() did not succeed".into())
+                None => Err("bcm_host::init() did not succeed".into()),
             };
         let dimensions = dimensions?;
 
@@ -65,7 +64,7 @@ impl Context {
             x: 0,
             y: 0,
             width: dimensions.width as i32,
-            height: dimensions.height as i32
+            height: dimensions.height as i32,
         };
 
         // setup the source rectangle where opengl will be drawing
@@ -73,32 +72,35 @@ impl Context {
             x: 0,
             y: 0,
             width: (dimensions.width as i32) << 16,
-            height: (dimensions.height as i32) << 16
+            height: (dimensions.height as i32) << 16,
         };
 
         let mut alpha = VCAlpha {
             flags: FlagsAlpha::FIXED_ALL_PIXELS,
             opacity: 255,
-            mask: 0
+            mask: 0,
         };
 
         // Create a element to hold the background
-        let bg_element = dispmanx::element_add(update, display,
-                                            2, // layer upon which to draw
-                                            &mut dest_rect,
-                                               0,//bg_resource,
-                                            &mut src_rect,
-                                            dispmanx::DISPMANX_PROTECTION_NONE,
-                                            &mut alpha,
-                                            ptr::null_mut(),
-                                            Transform::NO_ROTATE);
+        let bg_element = dispmanx::element_add(
+            update,
+            display,
+            2, // layer upon which to draw
+            &mut dest_rect,
+            0, //bg_resource,
+            &mut src_rect,
+            dispmanx::DISPMANX_PROTECTION_NONE,
+            &mut alpha,
+            ptr::null_mut(),
+            Transform::NO_ROTATE,
+        );
 
         // draw opengl context on a clean background (cleared by the clear color)
         // TODO: Make this transparent
         let mut alpha = VCAlpha {
             flags: FlagsAlpha::FROM_SOURCE,
             opacity: 255,
-            mask: 0
+            mask: 0,
         };
 
         // setup the source rectangle where opengl will be drawing
@@ -106,48 +108,57 @@ impl Context {
             x: 0,
             y: 0,
             width: 0,
-            height: 0
+            height: 0,
         };
 
         // create our dispmanx element upon which we'll draw opengl using EGL
-        let element = dispmanx::element_add(update, display,
-                                  3, // layer upon which to draw
-                                  &mut dest_rect,
-                                  0,
-                                  &mut src_rect,
-                                  dispmanx::DISPMANX_PROTECTION_NONE,
-                                  &mut alpha,
-                                  ptr::null_mut(),
-                                  Transform::NO_ROTATE);
+        let element = dispmanx::element_add(
+            update,
+            display,
+            3, // layer upon which to draw
+            &mut dest_rect,
+            0,
+            &mut src_rect,
+            dispmanx::DISPMANX_PROTECTION_NONE,
+            &mut alpha,
+            ptr::null_mut(),
+            Transform::NO_ROTATE,
+        );
 
         // submit changes
         dispmanx::update_submit_sync(update);
 
         // create window to hold element, width, height
-        let mut window = Box::new( Window {
+        let mut window = Box::new(Window {
             element,
             width: dimensions.width as i32,
-            height: dimensions.height as i32
+            height: dimensions.height as i32,
         });
 
         // Create a EGL context
-        let context_attr = [egl::EGL_CONTEXT_CLIENT_VERSION, 2,
-            egl::EGL_NONE];
+        let context_attr = [egl::EGL_CONTEXT_CLIENT_VERSION, 2, egl::EGL_NONE];
 
-        let config_attr = [egl::EGL_RED_SIZE, 8,
-            egl::EGL_GREEN_SIZE, 8,
-            egl::EGL_BLUE_SIZE, 8,
-            egl::EGL_ALPHA_SIZE, 8,
-            egl::EGL_SURFACE_TYPE, egl::EGL_WINDOW_BIT,
-            egl::EGL_NONE];
+        let config_attr = [
+            egl::EGL_RED_SIZE,
+            8,
+            egl::EGL_GREEN_SIZE,
+            8,
+            egl::EGL_BLUE_SIZE,
+            8,
+            egl::EGL_ALPHA_SIZE,
+            8,
+            egl::EGL_SURFACE_TYPE,
+            egl::EGL_WINDOW_BIT,
+            egl::EGL_NONE,
+        ];
 
         // get display
-        let egl_display : Result<EGLDisplay, String> =
+        let egl_display: Result<EGLDisplay, String> =
             match egl::get_display(egl::EGL_DEFAULT_DISPLAY) {
-            Some(x) => Ok(x),
-            None => Err("Failed to get EGL display".into())
-        };
-        let egl_display : EGLDisplay = egl_display?;
+                Some(x) => Ok(x),
+                None => Err("Failed to get EGL display".into()),
+            };
+        let egl_display: EGLDisplay = egl_display?;
 
         // init display
         if !egl::initialize(egl_display, &mut 0i32, &mut 0i32) {
@@ -155,12 +166,12 @@ impl Context {
         }
 
         // choose first available configuration
-        let egl_config : Result<EGLConfig, String> =
+        let egl_config: Result<EGLConfig, String> =
             match egl::choose_config(egl_display, &config_attr, 1) {
-            Some(x) => Ok(x),
-            None => Err("Failed to get EGL configuration".into())
-        };
-        let egl_config : EGLConfig = egl_config?;
+                Some(x) => Ok(x),
+                None => Err("Failed to get EGL configuration".into()),
+            };
+        let egl_config: EGLConfig = egl_config?;
 
         // bind opengl es api
         if !egl::bind_api(egl::EGL_OPENGL_ES_API) {
@@ -168,23 +179,28 @@ impl Context {
         }
 
         // create egl context
-        let egl_context : Result<EGLContext, String> =
-            match egl::create_context(egl_display, egl_config, egl::EGL_NO_CONTEXT,
-                                                    &context_attr) {
+        let egl_context: Result<EGLContext, String> = match egl::create_context(
+            egl_display,
+            egl_config,
+            egl::EGL_NO_CONTEXT,
+            &context_attr,
+        ) {
             Some(x) => Ok(x),
-            None => Err("Failed to create EGL context".into())
+            None => Err("Failed to create EGL context".into()),
         };
-        let egl_context : EGLContext = egl_context?;
+        let egl_context: EGLContext = egl_context?;
 
         // create surface
-        let egl_surface : Result<EGLSurface, String> =
-            match egl::create_window_surface(egl_display, egl_config,
-                                           window.as_mut() as *mut _ as EGLNativeDisplayType,
-                                           &[]) {
+        let egl_surface: Result<EGLSurface, String> = match egl::create_window_surface(
+            egl_display,
+            egl_config,
+            window.as_mut() as *mut _ as EGLNativeDisplayType,
+            &[],
+        ) {
             Some(x) => Ok(x),
-            None => Err("Failed to create EGL surface".into())
+            None => Err("Failed to create EGL surface".into()),
         };
-        let egl_surface : EGLSurface = egl_surface?;
+        let egl_surface: EGLSurface = egl_surface?;
 
         // set current context
         if !egl::make_current(egl_display, egl_surface, egl_surface, egl_context) {
@@ -203,11 +219,11 @@ impl Context {
             surface: egl_surface,
 
             window,
-            dispman_display : display,
+            dispman_display: display,
             update,
             element,
 
-            bg_element
+            bg_element,
         })
     }
 }

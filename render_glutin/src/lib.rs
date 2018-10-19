@@ -6,8 +6,8 @@ extern crate libc;
 
 extern crate leaffront_core;
 
-mod texture;
 mod shader;
+mod texture;
 mod vbo;
 
 pub mod drawer;
