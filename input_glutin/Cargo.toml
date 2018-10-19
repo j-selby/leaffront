@@ -1,13 +1,11 @@
 [package]
-name = "leaffront-render-glutin"
+name = "leaffront-input-glutin"
 version = "0.1.0"
 authors = ["James <jselby@jselby.net>"]
 
 [dependencies]
-glutin = "0.11.0"
-image = "0.15.0"
-
-gl = "0.7.0"
-libc = "*"
+glutin = "0.16.0"
 
 leaffront-core = { path = "../core" }
+
+leaffront-render-glutin = { path = "../render_glutin" }
