@@ -9,5 +9,5 @@ cargo deb --no-build --no-strip
 
 cd dbus
 CARGO_INCREMENTAL=1 PKG_CONFIG_ALLOW_CROSS=1 cargo build --release
-strip target/release/leaffront-dbus --strip-unneeded
+strip ../target/release/leaffront-dbus --strip-unneeded
 cargo deb --no-build --no-strip
