@@ -3,8 +3,6 @@ extern crate leaffront_render_glutin;
 
 extern crate glutin;
 
-use glutin::GlContext;
-
 use leaffront_core::input::Input;
 use leaffront_core::version::VersionInfo;
 

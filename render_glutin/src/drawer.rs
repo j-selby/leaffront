@@ -15,7 +15,7 @@ use leaffront_core::version::VersionInfo;
 
 use glutin;
 use glutin::dpi::LogicalSize;
-use glutin::GlContext;
+use glutin::{PossiblyCurrent, ContextWrapper};
 
 use gl;
 
@@ -34,7 +34,7 @@ enum DrawState {
 
 pub struct GlutinDrawer {
     pub events_loop: glutin::EventsLoop,
-    pub gl_window: glutin::GlWindow,
+    pub gl_window: ContextWrapper<PossiblyCurrent, glutin::Window>,
 
     colored: GLSLShader,
     textured: GLSLShader,
@@ -175,13 +175,16 @@ impl GlutinDrawer {
             .with_gl(glutin::GlRequest::Latest)
             .with_gl_profile(glutin::GlProfile::Core)
             .with_vsync(true);
-        let gl_window = glutin::GlWindow::new(window, context, &events_loop).unwrap();
+        let gl_window = context.build_windowed(window,
+                                               &events_loop)
+            .expect("Failed to create GL window");
 
-        unsafe {
-            gl_window.make_current().unwrap();
-        }
+        let gl_window = unsafe {
+            gl_window.make_current().expect("Failed to set GL window as current")
+        };
 
         let (width, height): (u32, u32) = gl_window
+            .window()
             .get_inner_size()
             .expect("Failed to get size of current window")
             .into();
@@ -189,7 +192,7 @@ impl GlutinDrawer {
         unsafe {
             gl::load_with(|symbol| gl_window.get_proc_address(symbol) as *const _);
 
-            gl::DebugMessageCallback(gl_debug_message, ptr::null_mut());
+            gl::DebugMessageCallback(Some(gl_debug_message), ptr::null_mut());
 
             gl::ClearColor(0.0, 1.0, 0.0, 1.0);
             gl::Viewport(0, 0, width as i32, height as i32);
@@ -257,6 +260,7 @@ impl Drawer for GlutinDrawer {
 
         let (width, height): (u32, u32) = self
             .gl_window
+            .window()
             .get_inner_size()
             .expect("Failed to get size of current window")
             .into();
@@ -308,6 +312,7 @@ impl Drawer for GlutinDrawer {
     fn get_width(&self) -> usize {
         let (width, _): (u32, u32) = self
             .gl_window
+            .window()
             .get_inner_size()
             .expect("Failed to get size of current window")
             .into();
@@ -319,6 +324,7 @@ impl Drawer for GlutinDrawer {
     fn get_height(&self) -> usize {
         let (_, height): (u32, u32) = self
             .gl_window
+            .window()
             .get_inner_size()
             .expect("Failed to get size of current window")
             .into();

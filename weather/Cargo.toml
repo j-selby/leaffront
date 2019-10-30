@@ -4,5 +4,7 @@ version = "0.1.0"
 authors = ["James <jselby@jselby.net>"]
 
 [dependencies]
-ftp = "3.0.1"
-xmltree = "0.8.0"
+reqwest = "0.9.22"
+toml = "0.5.4"
+serde = "1.0"
+Inflector = "0.11.4"
