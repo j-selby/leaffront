@@ -17,3 +17,8 @@ brightness = 12
 
 [weather]
 update_freq = 20
+
+[weather.config]
+api_key = "<insert here>"
+location = "Sydney,AU"
+temp_units = "Metric"

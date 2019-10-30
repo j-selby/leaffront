@@ -135,14 +135,14 @@ pub fn main_loop(config: LeaffrontConfig) {
             _ => {}
         }
 
-        if touched {
+        /*if touched {
             top_touch_cooldown = Instant::now();
             show_top_touch = true;
         }
 
         if Instant::now() - Duration::from_secs(5) > top_touch_cooldown {
             show_top_touch = false;
-        }
+        }*/
 
         let next_state = match &state {
             &ScreenState::Day(ref msg) => {
