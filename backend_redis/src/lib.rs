@@ -12,7 +12,6 @@ use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender, TryRecvError};
 
 use std::thread;
-use std::thread::JoinHandle;
 
 pub struct RedisBackend {
     notify: Receiver<Notification>,
@@ -43,7 +42,7 @@ impl RedisBackend {
             mpsc::channel();
 
         // TODO: Handle shutdowns
-        let handle = thread::spawn(move || {
+        thread::spawn(move || {
             loop {
                 let msg = sub.get_message().expect("Failed to parse message");
                 let payload: String = msg.get_payload().expect("Failed to parse payload");
