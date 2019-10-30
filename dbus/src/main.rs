@@ -16,7 +16,7 @@ pub struct Notification {
 }
 
 fn main() {
-    let mut server = NotificationServer::new();
+    let mut server = NotificationServer::create();
 
     let client = redis::Client::open("redis://127.0.0.1/").unwrap();
     let sub = client.get_connection().unwrap();
