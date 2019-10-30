@@ -122,7 +122,7 @@ pub fn main_loop(config: LeaffrontConfig) {
 
         // Tick notifications
         // TODO: Config time
-        notifications.retain(|ref x| x.displayed.elapsed() < Duration::from_secs(5));
+        notifications.retain(|x| x.displayed.elapsed() < Duration::from_secs(5));
 
         // Handle the adjustment of state
         let touched = input.is_mouse_down();

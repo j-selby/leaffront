@@ -77,21 +77,32 @@ struct ResponseWeatherSystem {
 /// JSON output from OpenWeatherMap
 #[derive(Deserialize, Debug)]
 struct OpenWeatherMapResponse {
-    coord : ResponseCoords,
+    #[serde(default)]
+    coord : Option<ResponseCoords>,
     weather : Vec<ResponseWeatherEntry>,
     /// Unknown use - reports "stations"?
-    base : String,
+    #[serde(default)]
+    base : Option<String>,
     main : ResponseWeatherMainMeasurements,
-    visibility : u64,
-    wind : ResponseWeatherWind,
-    clouds : ResponseWeatherClouds,
+    #[serde(default)]
+    visibility : Option<u64>,
+    #[serde(default)]
+    wind : Option<ResponseWeatherWind>,
+    #[serde(default)]
+    clouds : Option<ResponseWeatherClouds>,
     // Day/time
-    dt : u64,
-    sys : ResponseWeatherSystem,
-    timezone : u64,
-    id : u64,
-    name : String,
-    cod : u64
+    #[serde(default)]
+    dt : Option<u64>,
+    #[serde(default)]
+    sys : Option<ResponseWeatherSystem>,
+    #[serde(default)]
+    timezone : Option<u64>,
+    #[serde(default)]
+    id : Option<u64>,
+    #[serde(default)]
+    name : Option<String>,
+    #[serde(default)]
+    cod : Option<u64>
 }
 
 pub struct OpenWeatherMap;
