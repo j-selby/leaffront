@@ -36,6 +36,6 @@ fn main() {
         let v: String = serde_json::to_string(&notification).unwrap();
         let k: &str = "leaffront.notify";
 
-        redis::cmd("PUBLISH").arg(k).arg(&v).execute(&sub);
+        redis::cmd("PUBLISH").arg(k).arg(&v).execute(sub);
     });
 }
