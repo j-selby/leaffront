@@ -54,7 +54,7 @@ impl<'a, T: Dimensions> FontCache<'a, T> {
         color: &Color,
         size: i32,
         pos: &Position,
-        draw: &mut Drawer<NativeTexture = T>,
+        draw: &mut dyn Drawer<NativeTexture = T>,
     ) {
         let layout = self.font.layout(
             text,

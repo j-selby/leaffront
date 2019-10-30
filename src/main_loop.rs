@@ -72,12 +72,15 @@ pub fn main_loop(config: LeaffrontConfig) {
 
     let mut font = FontCache::from_bytes(font_data);
 
-    let mut weather_manager = WeatherManager::new(config.weather.update_freq * 60 * 1000);
+    let mut weather_manager = WeatherManager::new(config.weather.update_freq * 60 * 1000, config.weather.config);
 
     let mut rng = thread_rng();
     let mut night_x = -1;
     let mut night_y = -1;
     let mut night_cooldown = Instant::now();
+
+    let mut top_touch_cooldown = Instant::now();
+    let mut show_top_touch = false;
 
     // Update the background
     let bg_mgr = BackgroundManager::new(config.art_dir);
@@ -130,6 +133,15 @@ pub fn main_loop(config: LeaffrontConfig) {
                 drawer.set_background(img);
             }
             _ => {}
+        }
+
+        if touched {
+            top_touch_cooldown = Instant::now();
+            show_top_touch = true;
+        }
+
+        if Instant::now() - Duration::from_secs(5) > top_touch_cooldown {
+            show_top_touch = false;
         }
 
         let next_state = match &state {
@@ -238,7 +250,7 @@ pub fn main_loop(config: LeaffrontConfig) {
                         let weather = weather_manager.get();
                         let msg = match weather {
                             Ok(weather) => {
-                                format!("{}°C - {}", weather.temperature, weather.description)
+                                format!("{}°C - {}", weather.temperature.round(), weather.description)
                             }
                             Err(msg) => msg,
                         };
@@ -251,6 +263,21 @@ pub fn main_loop(config: LeaffrontConfig) {
                             &mut drawer,
                         );
                     }
+                }
+
+                if show_top_touch {
+                    drawer.draw_colored_rect(
+                        &Rect::new(0, 0, screen_width, 60),
+                        &Color::new_4byte(0, 0, 0, 170),
+                    );
+
+                    font.draw(
+                        "Exit",
+                        &Color::new_3byte(255, 255, 255),
+                        30,
+                        &Position::new(20, 15),
+                        &mut drawer,
+                    )
                 }
             }
             &ScreenState::Night => {

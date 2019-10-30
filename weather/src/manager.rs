@@ -1,4 +1,3 @@
-use bom::BOM;
 /// The weather manager controls a weather polling thread, and provides a mechanism to poll
 /// for weather whenever required.
 use Weather;
@@ -10,6 +9,7 @@ use std::sync::mpsc::{Receiver, Sender, RecvTimeoutError};
 use std::thread;
 
 use std::time::Duration;
+use openweathermap::OpenWeatherMap;
 
 struct WeatherWorker {
     channel_sender : Sender<()>,
@@ -27,7 +27,7 @@ impl WeatherWorker {
         self.channel_receiver.recv_timeout(timeout)
     }
 
-    pub fn new() -> Self {
+    pub fn new(config : Option<toml::Value>) -> Self {
         let (request_tx, request_rx) = mpsc::channel();
         let (response_tx, response_rx) = mpsc::channel();
 
@@ -37,7 +37,7 @@ impl WeatherWorker {
                 match request_rx.recv() {
                     Ok(_) => {
                         // We have a weather request - service it.
-                        let weather = BOM::get_weather();
+                        let weather = OpenWeatherMap::get_weather(config.clone());
                         response_tx.send(weather)
                             .expect("Failed to send weather to weather control thread");
                     },
@@ -78,11 +78,11 @@ impl WeatherManager {
 
     /// Creates a new manager with a dedicated thread.
     /// update_frequency: milliseconds between updates
-    pub fn new(update_frequency: u64) -> Self {
+    pub fn new(update_frequency: u64, config : Option<toml::Value>) -> Self {
         let (tx, rx) = mpsc::channel();
 
         thread::spawn(move || {
-            let mut worker = WeatherWorker::new();
+            let mut worker = WeatherWorker::new(config.clone());
 
             loop {
                 worker.send_request();
@@ -91,19 +91,28 @@ impl WeatherManager {
                     // If polling worked fine
                     Ok(weather) => {
                         let success = weather.is_ok();
+
+                        match &weather {
+                            &Err(ref x) => {
+                                println!("Weather update failed ({:?}); retrying in 10 seconds...", x);
+                            }
+                            _ => {}
+                        }
+
                         tx.send(weather).expect("Failed to send weather to main thread");
+
                         if success {
                             thread::sleep(Duration::from_millis(update_frequency));
                         } else {
-                            println!("Weather update failed; retrying in 10 seconds...");
                             thread::sleep(Duration::from_millis(10 * 1000));
                         }
                     },
                     Err(e) => {
-                        println!("Weather thread timed out; reinitialising and retrying in 10 seconds...");
+                        println!("Weather thread timed out ({:?}); \
+                        reinitialising and retrying in 10 seconds...", e);
                         thread::sleep(Duration::from_millis(10 * 1000));
 
-                        worker = WeatherWorker::new();
+                        worker = WeatherWorker::new(config.clone());
                     }
                 }
             }

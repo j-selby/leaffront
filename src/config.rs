@@ -36,6 +36,7 @@ pub struct Day {
 #[derive(Deserialize, Debug)]
 pub struct Weather {
     pub update_freq: u64,
+    pub config: Option<toml::Value>,
 }
 
 /// Loads a configuration file.
