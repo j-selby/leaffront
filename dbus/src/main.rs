@@ -9,6 +9,8 @@ extern crate serde_derive;
 
 use notify_rust::server::NotificationServer;
 
+use std::sync::Arc;
+
 #[derive(Serialize, Deserialize)]
 pub struct Notification {
     name: String,
@@ -23,11 +25,14 @@ fn main() {
 
     println!("Ready!");
 
+    let sub = Arc::new(sub);
+
     NotificationServer::start(&server, |ref notify| {
         let notification = Notification {
             name: notify.appname.to_owned(),
             contents: notify.body.to_owned(),
         };
+
         let v: String = serde_json::to_string(&notification).unwrap();
         let k: &str = "leaffront.notify";
 
