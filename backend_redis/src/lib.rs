@@ -45,10 +45,9 @@ impl RedisBackend {
         // TODO: Handle shutdowns
         let handle = thread::spawn(move || {
             loop {
-                // TODO: Handle this stuff safely
-                let msg = sub.get_message().unwrap();
-                let payload: String = msg.get_payload().unwrap();
-                let result = json::parse(&payload).unwrap();
+                let msg = sub.get_message().expect("Failed to parse message");
+                let payload: String = msg.get_payload().expect("Failed to parse payload");
+                let result = json::parse(&payload).expect("Failed to parse JSON");
                 println!(
                     "channel '{}': recv'd from redis: {:?}",
                     msg.get_channel_name(),
@@ -57,7 +56,7 @@ impl RedisBackend {
                 notify_tx.send(Notification {
                     name: result["name"].as_str().unwrap().to_owned(),
                     contents: result["contents"].as_str().unwrap().to_owned(),
-                });
+                }).expect("Failed to send notification to frontend");
             }
         });
 
