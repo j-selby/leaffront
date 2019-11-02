@@ -27,16 +27,21 @@ struct OpenWeatherMapConfig {
 /// Actual location for request
 #[derive(Deserialize, Debug)]
 struct ResponseCoords {
+    #[serde(default)]
     lon : f64,
+    #[serde(default)]
     lat : f64,
 }
 
 /// Contains a particular state of weather (e.g. "cloudy")
 #[derive(Deserialize, Debug)]
 struct ResponseWeatherEntry {
+    #[serde(default)]
     id : u64,
+    #[serde(default)]
     main : String,
     description : String,
+    #[serde(default)]
     icon : String,
 }
 
@@ -44,9 +49,13 @@ struct ResponseWeatherEntry {
 #[derive(Deserialize, Debug)]
 struct ResponseWeatherMainMeasurements {
     temp : f64,
+    #[serde(default)]
     pressure : f64,
+    #[serde(default)]
     humidity : f64,
+    #[serde(default)]
     temp_min : f64,
+    #[serde(default)]
     temp_max : f64
 }
 
@@ -60,6 +69,7 @@ struct ResponseWeatherWind {
 /// Information about cloud levels
 #[derive(Deserialize, Debug)]
 struct ResponseWeatherClouds {
+    #[serde(default)]
     all : f64
 }
 
@@ -67,10 +77,15 @@ struct ResponseWeatherClouds {
 #[derive(Deserialize, Debug)]
 struct ResponseWeatherSystem {
     #[serde(rename = "type")]
+    #[serde(default)]
     sys_type : u64,
+    #[serde(default)]
     id : u64,
+    #[serde(default)]
     country : String,
+    #[serde(default)]
     sunrise : u64,
+    #[serde(default)]
     sunset : u64
 }
 
