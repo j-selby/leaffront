@@ -3,6 +3,8 @@ use std::io::Read;
 
 use toml;
 
+use leaffront_weather::WeatherProviderKind;
+
 #[derive(Deserialize, Debug)]
 pub struct LeaffrontConfig {
     pub art_dir: String,
@@ -36,6 +38,7 @@ pub struct Day {
 #[derive(Deserialize, Debug)]
 pub struct Weather {
     pub update_freq: u64,
+    pub kind: WeatherProviderKind,
     pub config: Option<toml::Value>,
 }
 

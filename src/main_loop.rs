@@ -72,7 +72,11 @@ pub fn main_loop(config: LeaffrontConfig) {
 
     let mut font = FontCache::from_bytes(font_data);
 
-    let mut weather_manager = WeatherManager::new(config.weather.update_freq * 60 * 1000, config.weather.config);
+    let mut weather_manager = WeatherManager::new(
+        config.weather.update_freq * 60 * 1000,
+        config.weather.kind,
+        config.weather.config
+    );
 
     let mut rng = thread_rng();
     let mut night_x = -1;
