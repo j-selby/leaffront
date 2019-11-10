@@ -2,6 +2,8 @@
 
 use ::{WeatherProvider, Weather};
 
+use reqwest::header;
+
 static ENDPOINT : &'static str = "https://api.weather.bom.gov.au/v1";
 
 #[derive(Deserialize, Debug)]
@@ -118,7 +120,21 @@ impl WeatherProvider for BOM {
         let config : BOMConfig = config.try_into()
             .map_err(|x| format!("Failed to parse BOM config: {:?}", x))?;
 
-        let client = reqwest::Client::new();
+        let mut headers = header::HeaderMap::new();
+        headers.insert(header::USER_AGENT,
+                       header::HeaderValue::from_static(
+                           concat!(
+                            "LeafFront/v",
+                            env!("CARGO_PKG_VERSION"),
+                            " (https://github.com/j-selby/leaffront)"
+                           )
+                       )
+        );
+
+        let client = reqwest::Client::builder()
+            .default_headers(headers)
+            .build()
+            .map_err(|x| format!("Failed to build reqwest client: {:?}", x))?;
 
         let locations_response : ResponseLocations = client.get(&format!("{}/locations", ENDPOINT))
             .query(&[("search", config.location.clone())])
@@ -150,6 +166,9 @@ impl WeatherProvider for BOM {
         let weather_entry = weather_response.data.get(0)
             .ok_or_else(|| format!("No weather for location of {:?}", config.location))?;
 
+        let description = weather_entry.short_text.clone()
+            .ok_or_else(|| format!("No current weather description for location of {:?}", config.location))?;
+
         let observations_response : ResponseObservations =
             client.get(&format!("{}/locations/{}/observations", ENDPOINT, location_info.geohash))
                 .send()
@@ -157,11 +176,12 @@ impl WeatherProvider for BOM {
                 .json()
                 .map_err(|x| format!("Failed to parse BOM observations weather response: {:?}", x))?;
 
+        println!("Downloaded weather from BOM successfully");
+
         Ok (
             Weather {
                 temperature : observations_response.data.temp,
-                description: weather_entry.short_text.clone()
-                    .ok_or_else(|| format!("No current weather description for location of {:?}", config.location))?,
+                description,
             }
         )
     }
