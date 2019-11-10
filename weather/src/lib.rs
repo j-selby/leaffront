@@ -6,6 +6,7 @@ extern crate serde;
 extern crate toml;
 extern crate inflector;
 
+pub mod bom;
 pub mod openweathermap;
 pub mod manager;
 
@@ -17,4 +18,11 @@ pub struct Weather {
 
 pub trait WeatherProvider {
     fn get_weather(config : Option<toml::Value>) -> Result<Weather, String>;
+}
+
+/// What weather providers are available:
+#[derive(Copy, Clone, Deserialize, Debug)]
+pub enum WeatherProviderKind {
+    OpenWeatherMap,
+    BOM
 }
