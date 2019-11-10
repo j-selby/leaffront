@@ -66,3 +66,6 @@ assets = [
     ["example_config.toml", "etc/leaffront/config.toml", "644"],
     ["res/leaffront-station.service", "lib/systemd/system/leaffront-station.service", "644"]
 ]
+conf-files = [
+    "/etc/leaffront/config.toml"
+]
