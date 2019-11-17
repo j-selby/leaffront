@@ -3,6 +3,7 @@
 use ::{WeatherProvider, Weather};
 
 use reqwest::header;
+use serde::Deserialize;
 
 static ENDPOINT : &'static str = "https://api.weather.bom.gov.au/v1";
 
@@ -110,6 +111,35 @@ pub struct BOM;
 impl BOM {
 }
 
+fn try_with_different_length_geocodes<T, F>(client : &reqwest::Client, endpoint : F, geohash : &str) -> Result<T, String>
+    where F: Fn(&str) -> String,
+          for<'de> T: serde::Deserialize<'de> {
+    match client.get(&endpoint(geohash))
+        .send()
+        .map_err(|x| format!("Error sending request: {:?}", x))?
+        .json()
+        .map_err(|x| format!("Error parsing request: {:?}", x)) {
+        Ok(v) => Ok(v),
+        Err(e) => {
+            if geohash.len() < 7 {
+                return Err(e);
+            }
+
+            println!("BOM API: Failed to parse forecasts with 7-code geohash ({:?}), retrying with 6...", e);
+
+            let short_geocode = &geohash[0..6];
+
+            assert_eq!(short_geocode.len(), 6);
+
+            client.get(&endpoint(short_geocode))
+                .send()
+                .map_err(|x| format!("Error sending request: {:?}", x))?
+                .json()
+                .map_err(|x| format!("Error parsing request: {:?}", x))
+        }
+    }
+}
+
 impl WeatherProvider for BOM {
     fn get_weather(config: Option<toml::Value>) -> Result<Weather, String> {
         // We require a config for BOM:
@@ -155,12 +185,14 @@ impl WeatherProvider for BOM {
         println!("BOM API: Got {:?} for location request of {:?}", location_info.name,
                  config.location);
 
+        // Attempt with the full geohash, then retry with regional info
         let weather_response : ResponseForecast =
-            client.get(&format!("{}/locations/{}/forecasts/daily", ENDPOINT, location_info.geohash))
-            .send()
-            .map_err(|x| format!("Failed to handle forecasts request: {:?}", x))?
-            .json()
-            .map_err(|x| format!("Failed to parse BOM forecasts weather response: {:?}", x))?;
+            try_with_different_length_geocodes(&client,
+                                               |geohash| {
+                                                   format!("{}/locations/{}/forecasts/daily", ENDPOINT, geohash)
+                                               },
+                                               &location_info.geohash)
+            .map_err(|x| format!("Failed to download BOM forecasts weather response: {:?}", x))?;
 
         // Attempt to get the first element of the forecast
         let weather_entry = weather_response.data.get(0)
@@ -170,11 +202,12 @@ impl WeatherProvider for BOM {
             .ok_or_else(|| format!("No current weather description for location of {:?}", config.location))?;
 
         let observations_response : ResponseObservations =
-            client.get(&format!("{}/locations/{}/observations", ENDPOINT, location_info.geohash))
-                .send()
-                .map_err(|x| format!("Failed to handle observations request: {:?}", x))?
-                .json()
-                .map_err(|x| format!("Failed to parse BOM observations weather response: {:?}", x))?;
+            try_with_different_length_geocodes(&client,
+                                               |geohash| {
+                                                   format!("{}/locations/{}/observations", ENDPOINT, geohash)
+                                               },
+                                               &location_info.geohash)
+                .map_err(|x| format!("Failed to download BOM forecasts weather response: {:?}", x))?;
 
         println!("Downloaded weather from BOM successfully");
 
