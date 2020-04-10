@@ -19,11 +19,11 @@ use glutin::{PossiblyCurrent, ContextWrapper};
 
 use gl;
 
-use std::mem;
 use std::ptr;
 
 use std::os::raw::c_char;
 use std::os::raw::c_void;
+use std::mem::MaybeUninit;
 
 #[derive(Ord, PartialOrd, Eq, PartialEq)]
 enum DrawState {
@@ -203,10 +203,9 @@ impl GlutinDrawer {
         let uv_vbo = GLVBO::new();
 
         unsafe {
-            // TODO: Fucking unsafe
-            let mut ptr = mem::uninitialized();
-            gl::GenVertexArrays(1, &mut ptr);
-            gl::BindVertexArray(ptr);
+            let mut ptr = MaybeUninit::uninit();
+            gl::GenVertexArrays(1, ptr.as_mut_ptr());
+            gl::BindVertexArray(ptr.assume_init());
         }
 
         let colored_shader = GLSLShader::create_shader(
