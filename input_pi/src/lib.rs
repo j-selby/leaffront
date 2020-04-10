@@ -36,19 +36,26 @@ impl PiInput {
     /// Updates input
     fn update(&mut self) {
         let mut input = Vec::new();
-        self.devices
-            .retain(|mut device| match device.events_no_sync() {
+
+        // Rust's retain doesn't allow for mutable access, so do this manually
+        let mut i = 0;
+        while i < self.devices.len() {
+            let device = &mut self.devices[i];
+            match device.events_no_sync() {
                 Ok(events) => {
                     for evt in events {
                         input.push(evt);
                     }
-                    true
+                    i += 1;
+                    continue;
                 }
                 Err(e) => {
                     println!("Device {:?} failed to send events: {:?}", device.name(), e);
-                    false
                 }
-            });
+            }
+
+            let _ = self.devices.remove(i);
+        }
 
         let mut touched = false;
 
@@ -90,7 +97,7 @@ impl Input for PiInput {
     fn run<T: FnMut(&Self, &mut Self::Window) -> (bool, Instant) + 'static>(
         mut self,
         mut drawer: Self::Window,
-        function: T,
+        mut function: T,
     ) -> ! {
         loop {
             self.update();
