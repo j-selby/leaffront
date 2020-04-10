@@ -48,7 +48,7 @@ impl<'a, T: Dimensions> FontCache<'a, T> {
     }
 
     /// Draws the specified string to the screen.
-    pub fn draw<DrawInstance : Drawer<NativeTexture = T>>(
+    pub fn draw<DrawInstance: Drawer<NativeTexture = T>>(
         &mut self,
         text: &str,
         color: &Color,
@@ -66,7 +66,6 @@ impl<'a, T: Dimensions> FontCache<'a, T> {
                 y: pos.y as f32 + metrics.ascent,
             },
         );
-
 
         for glyph in layout {
             // Render out texture

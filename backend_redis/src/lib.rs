@@ -42,21 +42,21 @@ impl RedisBackend {
             mpsc::channel();
 
         // TODO: Handle shutdowns
-        thread::spawn(move || {
-            loop {
-                let msg = sub.get_message().expect("Failed to parse message");
-                let payload: String = msg.get_payload().expect("Failed to parse payload");
-                let result = json::parse(&payload).expect("Failed to parse JSON");
-                println!(
-                    "channel '{}': recv'd from redis: {:?}",
-                    msg.get_channel_name(),
-                    result
-                );
-                notify_tx.send(Notification {
+        thread::spawn(move || loop {
+            let msg = sub.get_message().expect("Failed to parse message");
+            let payload: String = msg.get_payload().expect("Failed to parse payload");
+            let result = json::parse(&payload).expect("Failed to parse JSON");
+            println!(
+                "channel '{}': recv'd from redis: {:?}",
+                msg.get_channel_name(),
+                result
+            );
+            notify_tx
+                .send(Notification {
                     name: result["name"].as_str().unwrap().to_owned(),
                     contents: result["contents"].as_str().unwrap().to_owned(),
-                }).expect("Failed to send notification to frontend");
-            }
+                })
+                .expect("Failed to send notification to frontend");
         });
 
         Ok(RedisBackend { notify: notify_rx })

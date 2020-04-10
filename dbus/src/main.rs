@@ -29,8 +29,8 @@ fn main() {
             contents: notify.body.to_owned(),
         };
 
-        let v: String = serde_json::to_string(&notification)
-            .expect("Failed to convert notification to JSON");
+        let v: String =
+            serde_json::to_string(&notification).expect("Failed to convert notification to JSON");
         let k: &str = "leaffront.notify";
 
         redis::cmd("PUBLISH").arg(k).arg(&v).execute(&sub);

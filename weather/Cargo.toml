@@ -4,7 +4,9 @@ version = "0.1.0"
 authors = ["James <jselby@jselby.net>"]
 
 [dependencies]
-reqwest = "0.9.22"
-toml = "0.5.4"
+reqwest = {version = "0.10.4", features = ["blocking", "json"]}
+toml = "0.5.6"
 serde = "1.0"
+serde_derive = "1.0"
 Inflector = "0.11.4"
+futures-util = "0.3.4"

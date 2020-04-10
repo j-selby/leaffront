@@ -15,15 +15,15 @@ use leaffront_core::version::VersionInfo;
 
 use glutin;
 use glutin::dpi::LogicalSize;
-use glutin::{PossiblyCurrent, ContextWrapper};
+use glutin::{ContextWrapper, PossiblyCurrent};
 
 use gl;
 
 use std::ptr;
 
+use std::mem::MaybeUninit;
 use std::os::raw::c_char;
 use std::os::raw::c_void;
-use std::mem::MaybeUninit;
 
 #[derive(Ord, PartialOrd, Eq, PartialEq)]
 enum DrawState {
@@ -33,8 +33,8 @@ enum DrawState {
 }
 
 pub struct GlutinDrawer {
-    pub events_loop: glutin::EventsLoop,
-    pub gl_window: ContextWrapper<PossiblyCurrent, glutin::Window>,
+    pub events_loop: Option<glutin::event_loop::EventLoop<()>>,
+    pub gl_window: ContextWrapper<PossiblyCurrent, glutin::window::Window>,
 
     colored: GLSLShader,
     textured: GLSLShader,
@@ -167,27 +167,25 @@ impl GlutinDrawer {
     }
 
     pub fn new() -> Self {
-        let events_loop = glutin::EventsLoop::new();
-        let window = glutin::WindowBuilder::new()
+        let events_loop = glutin::event_loop::EventLoop::new();
+        let window = glutin::window::WindowBuilder::new()
             .with_title("Leaffront")
-            .with_dimensions(LogicalSize::new(1270.0, 720.0));
+            .with_inner_size(LogicalSize::new(1270.0, 720.0));
         let context = glutin::ContextBuilder::new()
             .with_gl(glutin::GlRequest::Latest)
             .with_gl_profile(glutin::GlProfile::Core)
             .with_vsync(true);
-        let gl_window = context.build_windowed(window,
-                                               &events_loop)
+        let gl_window = context
+            .build_windowed(window, &events_loop)
             .expect("Failed to create GL window");
 
         let gl_window = unsafe {
-            gl_window.make_current().expect("Failed to set GL window as current")
+            gl_window
+                .make_current()
+                .expect("Failed to set GL window as current")
         };
 
-        let (width, height): (u32, u32) = gl_window
-            .window()
-            .get_inner_size()
-            .expect("Failed to get size of current window")
-            .into();
+        let (width, height): (u32, u32) = gl_window.window().inner_size().into();
 
         unsafe {
             gl::load_with(|symbol| gl_window.get_proc_address(symbol) as *const _);
@@ -211,7 +209,8 @@ impl GlutinDrawer {
         let colored_shader = GLSLShader::create_shader(
             include_bytes!("../res/shaders/color.vert"),
             include_bytes!("../res/shaders/color.frag"),
-        ).unwrap();
+        )
+        .unwrap();
 
         colored_shader.use_program();
         let attr_colored_vertex = colored_shader.get_attribute("input_vertex");
@@ -220,7 +219,8 @@ impl GlutinDrawer {
         let textured_shader = GLSLShader::create_shader(
             include_bytes!("../res/shaders/tex.vert"),
             include_bytes!("../res/shaders/tex.frag"),
-        ).unwrap();
+        )
+        .unwrap();
 
         textured_shader.use_program();
         let attr_textured_vertex = textured_shader.get_attribute("input_vertex");
@@ -228,7 +228,7 @@ impl GlutinDrawer {
         let attr_textured_uv = textured_shader.get_attribute("input_uv");
 
         GlutinDrawer {
-            events_loop,
+            events_loop: Some(events_loop),
             gl_window,
             colored: colored_shader,
             textured: textured_shader,
@@ -257,12 +257,7 @@ impl Drawer for GlutinDrawer {
 
         self.state = DrawState::None;
 
-        let (width, height): (u32, u32) = self
-            .gl_window
-            .window()
-            .get_inner_size()
-            .expect("Failed to get size of current window")
-            .into();
+        let (width, height): (u32, u32) = self.gl_window.window().inner_size().into();
 
         unsafe {
             gl::Viewport(0, 0, width as i32, height as i32);
@@ -309,24 +304,14 @@ impl Drawer for GlutinDrawer {
 
     /// Returns the width of the screen.
     fn get_width(&self) -> usize {
-        let (width, _): (u32, u32) = self
-            .gl_window
-            .window()
-            .get_inner_size()
-            .expect("Failed to get size of current window")
-            .into();
+        let (width, _): (u32, u32) = self.gl_window.window().inner_size().into();
 
         width as usize
     }
 
     /// Returns the height of the screen.
     fn get_height(&self) -> usize {
-        let (_, height): (u32, u32) = self
-            .gl_window
-            .window()
-            .get_inner_size()
-            .expect("Failed to get size of current window")
-            .into();
+        let (_, height): (u32, u32) = self.gl_window.window().inner_size().into();
 
         height as usize
     }

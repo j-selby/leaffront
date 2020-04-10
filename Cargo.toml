@@ -6,19 +6,20 @@ authors = ["James <jselby@jselby.net>"]
 description = "A weather and notification frontend for Leaffront, designed for embedded systems."
 repository = "https://github.com/j-selby/leaffront"
 readme = "README.md"
+edition = "2018"
 
 [dependencies]
 serde = "1.0"
 serde_derive = "1.0"
-toml = "0.5.4"
+toml = "0.5.6"
 clap = "2.33.0"
 
-chrono = "0.4.9"
+chrono = "0.4.11"
 
-ctrlc = "3.1.3"
+ctrlc = "3.1.4"
 
-image = "0.22.3"
-rand = "0.7.2"
+image = "0.23.3"
+rand = "0.7.3"
 
 leaffront-core = { path = "core" }
 leaffront-weather = { path = "weather" }

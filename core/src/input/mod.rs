@@ -1,11 +1,17 @@
 use super::render::Drawer;
 
+use std::time::Instant;
+
 /// Handles basic input
 pub trait Input {
     type Window: Drawer;
 
-    /// Updates input
-    fn update(&mut self, drawer: &mut Self::Window);
+    /// Infinitely runs the loop until told otherwise
+    fn run<T: FnMut(&Self, &mut Self::Window) -> (bool, Instant) + 'static>(
+        self,
+        drawer: Self::Window,
+        function: T,
+    ) -> !;
 
     /// Checks to see if the mouse/pointer is down
     fn is_mouse_down(&self) -> bool;
