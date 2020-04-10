@@ -41,7 +41,7 @@ impl PiInput {
         let mut i = 0;
         while i < self.devices.len() {
             let device = &mut self.devices[i];
-            match device.name().into_string() {
+            match device.name().to_str().map(|x| x.to_string()) {
                 Ok(device_name) => match device.events_no_sync() {
                     Ok(events) => {
                         for evt in events {
