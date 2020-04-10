@@ -6,7 +6,7 @@ extern crate evdev;
 use leaffront_core::input::Input;
 use leaffront_core::version::VersionInfo;
 
-use evdev::{DeviceState, RawEvents, ABSOLUTE, ABS_X, ABS_Y};
+use evdev::{ABSOLUTE, ABS_X, ABS_Y};
 use leaffront_render_pi::drawer::PiDrawer;
 use std::time::{Duration, Instant};
 use std::{process, thread};
@@ -55,10 +55,10 @@ impl PiInput {
         for input in input {
             if input._type == ABSOLUTE.number() {
                 touched = true;
-                if ABS_X.intersects(input.code) {
+                if input.code == ABS_X.number() {
                     println!("Got X abs event!");
                     self.mouse_x = input.value as usize;
-                } else if ABS_Y.intersects(input.code) {
+                } else if input.code == ABS_Y.number() {
                     println!("Got Y abs event!");
                     self.mouse_y = input.value as usize;
                 } else {
