@@ -7,6 +7,7 @@ use leaffront_core::input::Input;
 use leaffront_core::version::VersionInfo;
 
 use leaffront_render_pi::drawer::PiDrawer;
+use evdev::{DeviceState, RawEvents};
 
 /// Implements a basic input mechanism for the Pi through evdev.
 pub struct PiInput {
@@ -17,19 +18,30 @@ pub struct PiInput {
 }
 
 impl PiInput {
-    pub fn new() -> Self {
+    fn detect_devices(&mut self) {
+        self.devices.clear();
+
         let devices = evdev::enumerate();
 
-        for device in &devices {
-            println!("Found input device: {:?}", device.name());
+        for device in devices {
+            if device.events_supported().contains(Types::ABSOLUTE) {
+                println!("Found input device: {:?}", device.name());
+                self.devices.push(device);
+            }
         }
+    }
 
-        PiInput {
-            devices,
+    pub fn new() -> Self {
+        let mut input = PiInput {
+            devices : Vec::new(),
             mouse_x: 0,
             mouse_y: 0,
             mouse_down: false,
-        }
+        };
+
+        input.detect_devices();
+
+        input
     }
 }
 
@@ -39,18 +51,40 @@ impl Input for PiInput {
     /// Updates input
     fn update(&mut self, _: &mut Self::Window) {
         let mut input = Vec::new();
-        for device in &mut self.devices {
-            for evt in device.events_no_sync().unwrap() {
-                input.push(evt);
+        self.devices.retain(|mut device| {
+            match device.events_no_sync() {
+                Ok(events) => {
+                    for evt in events {
+                        input.push(evt);
+                    }
+                    true
+                },
+                Err(e) => {
+                    println!("Device {:?} failed to send events: {:?}", device.name(), e);
+                    false
+                }
             }
-        }
+        });
 
         let mut touched = false;
 
         for input in input {
-            if input._type == 3 {
+            if input._type == ABSOLUTE.number() {
                 touched = true;
-                break;
+                match input.code {
+                    EV_ABS::ABS_X => {
+                        println!("Got X abs event!");
+                        self.mouse_x = input.value as usize;
+                    },
+                    EV_ABS::ABS_Y => {
+                        println!("Got Y abs event!");
+                        self.mouse_y = input.value as usize;
+                    },
+                    x => {
+                        println!("Got unknown event: {:?}", x);
+                    }
+                }
+
             }
         }
 
@@ -68,7 +102,7 @@ impl Input for PiInput {
     }
 
     fn get_mouse_pos(&self) -> (usize, usize) {
-        unimplemented!()
+        (self.mouse_x, self.mouse_y)
     }
 }
 

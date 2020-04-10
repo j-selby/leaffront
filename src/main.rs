@@ -1,5 +1,6 @@
 extern crate leaffront_core;
 extern crate leaffront_weather;
+extern crate leaffront_ui;
 
 #[cfg(feature = "raspberry_pi")]
 extern crate leaffront_input_pi;

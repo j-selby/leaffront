@@ -2,7 +2,6 @@ use std::sync::mpsc;
 /// Manages the loading of backgrounds in the ... background.
 use std::sync::mpsc::{Receiver, Sender};
 
-use std::error::Error;
 use std::fs::read_dir;
 use std::fs::DirEntry;
 use std::io::Result as IoResult;
@@ -91,9 +90,9 @@ impl BackgroundManager {
                         Ok(msg) => msg,
                         Err(msg) => {
                             println!(
-                                "Error while loading image {}: {}",
+                                "Error while loading image {}: {:?}",
                                 file.path().display(),
-                                msg.description()
+                                msg
                             );
 
                             if itr > 10 {

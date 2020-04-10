@@ -950,11 +950,19 @@ dependencies = [
  "leaffront-input-pi 0.1.0",
  "leaffront-render-glutin 0.1.0",
  "leaffront-render-pi 0.1.0",
+ "leaffront-ui 0.1.0",
  "leaffront-weather 0.1.0",
  "rand 0.7.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.102 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.102 (registry+https://github.com/rust-lang/crates.io-index)",
  "toml 0.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "leaffront-ui"
+version = "0.1.0"
+dependencies = [
+ "leaffront-core 0.1.0",
 ]
 
 [[package]]

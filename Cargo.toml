@@ -22,6 +22,7 @@ rand = "0.7.2"
 
 leaffront-core = { path = "core" }
 leaffront-weather = { path = "weather" }
+leaffront-ui = { path = "ui" }
 
 leaffront-render-pi = { path = "render_pi", optional = true }
 leaffront-input-pi = { path = "input_pi", optional = true }

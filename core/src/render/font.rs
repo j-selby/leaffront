@@ -48,20 +48,20 @@ impl<'a, T: Dimensions> FontCache<'a, T> {
     }
 
     /// Draws the specified string to the screen.
-    pub fn draw(
+    pub fn draw<DrawInstance : Drawer<NativeTexture = T>>(
         &mut self,
         text: &str,
         color: &Color,
         size: i32,
         pos: &Position,
-        draw: &mut dyn Drawer<NativeTexture = T>,
+        draw: &mut DrawInstance,
     ) {
         let layout = self.font.layout(
             text,
             Scale::uniform(size as f32),
             Point {
                 x: pos.x as f32,
-                y: pos.y as f32,
+                y: pos.y as f32 + size as f32,
             },
         );
 
