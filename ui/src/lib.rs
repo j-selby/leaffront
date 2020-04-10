@@ -27,8 +27,7 @@ pub enum SizingPolicy {
     /// If this object will always fit to a specific physical size
     FixedPhysical(usize),
     /// If this object should expand to fit an area
-    Expanding
-    // TODO: Other sizing mechanisms
+    Expanding, // TODO: Other sizing mechanisms
 }
 
 /// A completed widget is something which has been discarded by the user and is ready to
@@ -39,10 +38,10 @@ pub trait CompletedWidget<DrawInstance: Drawer> {
     fn draw(&self, drawer: &mut DrawContext<DrawInstance>, constraints: DrawConstraints);
 
     /// Returns the vertical sizing policy for this widget.
-    fn get_vertical_sizing_policy(&self) -> SizingPolicy;
+    fn get_vertical_sizing_policy(&self, drawer: &DrawContext<DrawInstance>) -> SizingPolicy;
 
     /// Returns the horizontal sizing policy for this widget.
-    fn get_horizontal_sizing_policy(&self) -> SizingPolicy;
+    fn get_horizontal_sizing_policy(&self, drawer: &DrawContext<DrawInstance>) -> SizingPolicy;
 
     /// Gets this widgets desired offset from the origin.
     fn get_offset(&self) -> (f32, f32) {
@@ -67,11 +66,14 @@ where
     fn get_font_info(&self) -> &[&mut FontCache<'font_data_life, DrawInstance::NativeTexture>];
 
     /// Starts drawing a new window to the screen.
-    fn begin_window<'a>(&'a mut self, options: WindowOptions) -> Option<Window<'a, 'font_data_life, DrawInstance, Self>> {
+    fn begin_window<'a>(
+        &'a mut self,
+        options: WindowOptions,
+    ) -> Option<Window<'a, 'font_data_life, DrawInstance, Self>> {
         let style_info = self.get_style_info().to_owned();
         Some(Window {
             parent: self,
-            parent_font_life : PhantomData {},
+            parent_font_life: PhantomData {},
             widgets: Vec::new(),
             style: style_info,
             options,
@@ -82,10 +84,10 @@ where
         let style_info = self.get_style_info().to_owned();
         Some(DividedBox {
             parent: self,
-            parent_font_life : PhantomData {},
+            parent_font_life: PhantomData {},
             widgets: Vec::new(),
             style: style_info,
-            direction: DividedBoxDirection::Horizontal
+            direction: DividedBoxDirection::Horizontal,
         })
     }
 
@@ -93,10 +95,10 @@ where
         let style_info = self.get_style_info().to_owned();
         Some(DividedBox {
             parent: self,
-            parent_font_life : PhantomData {},
+            parent_font_life: PhantomData {},
             widgets: Vec::new(),
             style: style_info,
-            direction: DividedBoxDirection::Vertical
+            direction: DividedBoxDirection::Vertical,
         })
     }
 
@@ -158,6 +160,7 @@ pub struct WindowStyle {
     pub titlebar_height: usize,
     pub border_color: Color,
     pub border: usize,
+    pub padding: usize,
 }
 
 impl Default for WindowStyle {
@@ -168,6 +171,7 @@ impl Default for WindowStyle {
             titlebar_height: 30,
             border_color: Color::new_3byte(100, 100, 100),
             border: 1,
+            padding: 10,
         }
     }
 }
@@ -191,21 +195,24 @@ impl<'drawer_life, 'font_cache_life, 'font_data_life, DrawInstance: 'static + Dr
         // As the root, we don't perform any layout calculations, so pass it through directly.
         let offset = widget.get_offset();
 
-        let width = match widget.get_horizontal_sizing_policy() {
+        let width = match widget.get_horizontal_sizing_policy(&self.context) {
             SizingPolicy::Fixed(x) => x,
             SizingPolicy::FixedPhysical(x) => x as f32 / self.context.dimensions.0 as f32,
-            SizingPolicy::Expanding => 1.0 - offset.0
+            SizingPolicy::Expanding => 1.0 - offset.0,
         };
-        let height = match widget.get_vertical_sizing_policy() {
+        let height = match widget.get_vertical_sizing_policy(&self.context) {
             SizingPolicy::Fixed(y) => y,
             SizingPolicy::FixedPhysical(y) => y as f32 / self.context.dimensions.1 as f32,
-            SizingPolicy::Expanding => 1.0 - offset.1
+            SizingPolicy::Expanding => 1.0 - offset.1,
         };
 
-        widget.draw(&mut self.context, DrawConstraints {
-            origin: offset,
-            dimensions: Some((width, height))
-        });
+        widget.draw(
+            &mut self.context,
+            DrawConstraints {
+                origin: offset,
+                dimensions: Some((width, height)),
+            },
+        );
     }
 
     fn get_style_info(&self) -> &Style {
@@ -220,17 +227,26 @@ impl<'drawer_life, 'font_cache_life, 'font_data_life, DrawInstance: 'static + Dr
 /// of a toolbar and contents. This is typically of a fixed dimension.
 /// Note that this window's options are fixed by this point - this is for adding containers
 /// and so forth.
-pub struct Window<'parent, 'font_data_life, DrawInstance: 'static + Drawer, T : WidgetContainer<'font_data_life, DrawInstance>>
-{
+pub struct Window<
+    'parent,
+    'font_data_life,
+    DrawInstance: 'static + Drawer,
+    T: WidgetContainer<'font_data_life, DrawInstance>,
+> {
     parent: &'parent mut T,
-    parent_font_life : PhantomData<&'font_data_life ()>,
+    parent_font_life: PhantomData<&'font_data_life ()>,
 
     widgets: Vec<Box<dyn CompletedWidget<DrawInstance>>>,
     options: WindowOptions,
     pub style: Style,
 }
 
-impl<'parent, 'font_data_life, DrawInstance: 'static + Drawer, T : WidgetContainer<'font_data_life, DrawInstance>> Drop for Window<'parent, 'font_data_life, DrawInstance, T>
+impl<
+        'parent,
+        'font_data_life,
+        DrawInstance: 'static + Drawer,
+        T: WidgetContainer<'font_data_life, DrawInstance>,
+    > Drop for Window<'parent, 'font_data_life, DrawInstance, T>
 {
     fn drop(&mut self) {
         self.parent.add_widget(CompletedWindow {
@@ -241,7 +257,12 @@ impl<'parent, 'font_data_life, DrawInstance: 'static + Drawer, T : WidgetContain
     }
 }
 
-impl<'parent, 'font_data_life, DrawInstance: 'static + Drawer, T : WidgetContainer<'font_data_life, DrawInstance>> WidgetContainer<'font_data_life, DrawInstance>
+impl<
+        'parent,
+        'font_data_life,
+        DrawInstance: 'static + Drawer,
+        T: WidgetContainer<'font_data_life, DrawInstance>,
+    > WidgetContainer<'font_data_life, DrawInstance>
     for Window<'parent, 'font_data_life, DrawInstance, T>
 {
     fn add_widget<Widget: 'static + CompletedWidget<DrawInstance>>(&mut self, widget: Widget) {
@@ -276,6 +297,10 @@ impl<DrawInstance: 'static + Drawer> CompletedWidget<DrawInstance>
             (self.style.window.titlebar_height as f32) / (drawer.dimensions.1 as f32);
         let border_scaled_width = (self.style.window.border as f32) / (drawer.dimensions.0 as f32);
         let border_scaled_height = (self.style.window.border as f32) / (drawer.dimensions.1 as f32);
+        let padding_scaled_width =
+            (self.style.window.padding as f32) / (drawer.dimensions.0 as f32);
+        let padding_scaled_height =
+            (self.style.window.padding as f32) / (drawer.dimensions.1 as f32);
 
         // Calculate the space needed by the window
         let window_size = constraints.dimensions.unwrap_or_else(|| self.options.size);
@@ -296,16 +321,28 @@ impl<DrawInstance: 'static + Drawer> CompletedWidget<DrawInstance>
         let widget_constraints = if self.options.decorations {
             DrawConstraints {
                 origin: (
-                    constraints.origin.0 + border_scaled_width,
-                    constraints.origin.1 + title_scaled_height,
+                    constraints.origin.0 + border_scaled_width + padding_scaled_width,
+                    constraints.origin.1 + title_scaled_height + padding_scaled_height,
                 ),
                 dimensions: Some((
-                    window_size.0 - border_scaled_width * 2f32,
-                    window_size.1 - border_scaled_height - title_scaled_height,
+                    window_size.0 - border_scaled_width * 2f32 - padding_scaled_width * 2f32,
+                    window_size.1
+                        - border_scaled_height
+                        - title_scaled_height
+                        - padding_scaled_height * 2f32,
                 )),
             }
         } else {
-            constraints
+            DrawConstraints {
+                origin: (
+                    constraints.origin.0 + padding_scaled_width,
+                    constraints.origin.1 + padding_scaled_height,
+                ),
+                dimensions: Some((
+                    window_size.0 - padding_scaled_width * 2f32,
+                    window_size.1 - padding_scaled_height * 2f32,
+                )),
+            }
         };
 
         for widget in &self.widgets {
@@ -359,14 +396,13 @@ impl<DrawInstance: 'static + Drawer> CompletedWidget<DrawInstance>
                     .draw_colored_rect(&border_rect, &self.style.window.border_color);
             }
         }
-
     }
 
-    fn get_horizontal_sizing_policy(&self) -> SizingPolicy {
+    fn get_horizontal_sizing_policy(&self, drawer: &DrawContext<DrawInstance>) -> SizingPolicy {
         SizingPolicy::Fixed(self.options.size.0)
     }
 
-    fn get_vertical_sizing_policy(&self) -> SizingPolicy {
+    fn get_vertical_sizing_policy(&self, drawer: &DrawContext<DrawInstance>) -> SizingPolicy {
         SizingPolicy::Fixed(self.options.size.1)
     }
 
@@ -418,14 +454,14 @@ impl<DrawInstance: 'static + Drawer> CompletedWidget<DrawInstance> for Text {
         )
     }
 
-    fn get_vertical_sizing_policy(&self) -> SizingPolicy {
-        // TODO: Don't hardcode this - calculate from font before completing
-        SizingPolicy::FixedPhysical((self.style.text.size as f32 * 1.25f32) as usize)
+    fn get_vertical_sizing_policy(&self, drawer: &DrawContext<DrawInstance>) -> SizingPolicy {
+        SizingPolicy::FixedPhysical(self.style.text.size as usize)
     }
 
-    fn get_horizontal_sizing_policy(&self) -> SizingPolicy {
-        // TODO: Don't hardcode this - calculate from font before completing
-        SizingPolicy::Expanding
+    fn get_horizontal_sizing_policy(&self, drawer: &DrawContext<DrawInstance>) -> SizingPolicy {
+        SizingPolicy::FixedPhysical(
+            drawer.fonts[0].get_width(&self.contents, self.style.text.size) as usize,
+        )
     }
 }
 
@@ -433,22 +469,31 @@ impl<DrawInstance: 'static + Drawer> CompletedWidget<DrawInstance> for Text {
 #[derive(Copy, Clone)]
 enum DividedBoxDirection {
     Horizontal,
-    Vertical
+    Vertical,
 }
 
 /// A DividedBox (implemented as HBox or VBox) divides some working area between elements.
 /// This respects widgets sizing requirements where possible.
-pub struct DividedBox<'parent, 'font_data_life, DrawInstance: 'static + Drawer, T : WidgetContainer<'font_data_life, DrawInstance>>
-{
+pub struct DividedBox<
+    'parent,
+    'font_data_life,
+    DrawInstance: 'static + Drawer,
+    T: WidgetContainer<'font_data_life, DrawInstance>,
+> {
     parent: &'parent mut T,
-    parent_font_life : PhantomData<&'font_data_life ()>,
+    parent_font_life: PhantomData<&'font_data_life ()>,
 
-    direction : DividedBoxDirection,
+    direction: DividedBoxDirection,
     widgets: Vec<Box<dyn CompletedWidget<DrawInstance>>>,
     pub style: Style,
 }
 
-impl<'parent, 'font_data_life, DrawInstance: 'static + Drawer, T : WidgetContainer<'font_data_life, DrawInstance>> Drop for DividedBox<'parent, 'font_data_life, DrawInstance, T>
+impl<
+        'parent,
+        'font_data_life,
+        DrawInstance: 'static + Drawer,
+        T: WidgetContainer<'font_data_life, DrawInstance>,
+    > Drop for DividedBox<'parent, 'font_data_life, DrawInstance, T>
 {
     fn drop(&mut self) {
         self.parent.add_widget(CompletedDividedBox {
@@ -459,8 +504,13 @@ impl<'parent, 'font_data_life, DrawInstance: 'static + Drawer, T : WidgetContain
     }
 }
 
-impl<'parent, 'font_data_life, DrawInstance: 'static + Drawer, T : WidgetContainer<'font_data_life, DrawInstance>> WidgetContainer<'font_data_life, DrawInstance>
-for DividedBox<'parent, 'font_data_life, DrawInstance, T>
+impl<
+        'parent,
+        'font_data_life,
+        DrawInstance: 'static + Drawer,
+        T: WidgetContainer<'font_data_life, DrawInstance>,
+    > WidgetContainer<'font_data_life, DrawInstance>
+    for DividedBox<'parent, 'font_data_life, DrawInstance, T>
 {
     fn add_widget<Widget: 'static + CompletedWidget<DrawInstance>>(&mut self, widget: Widget) {
         self.widgets.push(Box::new(widget));
@@ -476,13 +526,15 @@ for DividedBox<'parent, 'font_data_life, DrawInstance, T>
 }
 
 /// A completed divided box, ready to display.
-struct CompletedDividedBox<DrawInstance : 'static + Drawer> {
-    direction : DividedBoxDirection,
+struct CompletedDividedBox<DrawInstance: 'static + Drawer> {
+    direction: DividedBoxDirection,
     widgets: Vec<Box<dyn CompletedWidget<DrawInstance>>>,
     pub style: Style,
 }
 
-impl<DrawInstance: 'static + Drawer> CompletedWidget<DrawInstance> for CompletedDividedBox<DrawInstance> {
+impl<DrawInstance: 'static + Drawer> CompletedWidget<DrawInstance>
+    for CompletedDividedBox<DrawInstance>
+{
     fn draw(&self, drawer: &mut DrawContext<DrawInstance>, constraints: DrawConstraints) {
         let mut x = constraints.origin.0;
         let mut y = constraints.origin.1;
@@ -491,17 +543,20 @@ impl<DrawInstance: 'static + Drawer> CompletedWidget<DrawInstance> for Completed
 
         for widget in &self.widgets {
             let policy = match self.direction {
-                DividedBoxDirection::Horizontal => widget.get_horizontal_sizing_policy(),
-                DividedBoxDirection::Vertical => widget.get_vertical_sizing_policy(),
+                DividedBoxDirection::Horizontal => widget.get_horizontal_sizing_policy(&drawer),
+                DividedBoxDirection::Vertical => widget.get_vertical_sizing_policy(&drawer),
             };
 
             // Calculate how much space this widget needs
             let add_logical = match policy {
                 SizingPolicy::Fixed(x) => x,
-                SizingPolicy::FixedPhysical(y) => y as f32 / match self.direction {
-                    DividedBoxDirection::Horizontal => drawer.dimensions.0 as f32,
-                    DividedBoxDirection::Vertical => drawer.dimensions.1 as f32,
-                },
+                SizingPolicy::FixedPhysical(y) => {
+                    y as f32
+                        / match self.direction {
+                            DividedBoxDirection::Horizontal => drawer.dimensions.0 as f32,
+                            DividedBoxDirection::Vertical => drawer.dimensions.1 as f32,
+                        }
+                }
                 SizingPolicy::Expanding => match self.direction {
                     DividedBoxDirection::Horizontal => remaining_dims.0,
                     DividedBoxDirection::Vertical => remaining_dims.1,
@@ -512,19 +567,22 @@ impl<DrawInstance: 'static + Drawer> CompletedWidget<DrawInstance> for Completed
             let allocated_size = match self.direction {
                 DividedBoxDirection::Horizontal => (add_logical, remaining_dims.1),
                 DividedBoxDirection::Vertical => (remaining_dims.0, add_logical),
-            };;
+            };
 
-            widget.draw(drawer, DrawConstraints {
-                origin: (x, y),
-                dimensions: Some(allocated_size)
-            });
+            widget.draw(
+                drawer,
+                DrawConstraints {
+                    origin: (x, y),
+                    dimensions: Some(allocated_size),
+                },
+            );
 
             // Update our internal state so we know where to allocate the next widget(s)
             match self.direction {
                 DividedBoxDirection::Horizontal => {
                     x += add_logical;
                     remaining_dims.0 -= add_logical;
-                },
+                }
                 DividedBoxDirection::Vertical => {
                     y += add_logical;
                     remaining_dims.1 -= add_logical;
@@ -533,15 +591,14 @@ impl<DrawInstance: 'static + Drawer> CompletedWidget<DrawInstance> for Completed
         }
     }
 
-    fn get_vertical_sizing_policy(&self) -> SizingPolicy {
+    fn get_vertical_sizing_policy(&self, drawer: &DrawContext<DrawInstance>) -> SizingPolicy {
         SizingPolicy::Expanding
     }
 
-    fn get_horizontal_sizing_policy(&self) -> SizingPolicy {
+    fn get_horizontal_sizing_policy(&self, drawer: &DrawContext<DrawInstance>) -> SizingPolicy {
         SizingPolicy::Expanding
     }
 }
-
 
 /// Begins a new UI root. Note that this always returns true unless the UI is hidden -
 /// this is to enable consistent syntax and proper drop mechanics.
