@@ -130,23 +130,7 @@ pub fn main_loop(config: LeaffrontConfig) {
         // TODO: Config time
         notifications.retain(|x| x.displayed.elapsed() < Duration::from_secs(5));
 
-        drawer.start();
-        drawer.enable_blending();
-
-        let screen_width = drawer.get_width();
-        let screen_height = drawer.get_height();
-        if let Some(mut root) = begin_root(&mut drawer, vec![&mut font], (screen_width, screen_height)) {
-            if let Some(mut window) = root.begin_window(
-                WindowOptions {
-                    decorations: false,
-                    ..WindowOptions::default()
-                }
-            ) {
-                window.text("Hello, World!");
-            }
-        }
-
-        /*// Handle the adjustment of state
+        // Handle the adjustment of state
         let touched = input.is_mouse_down();
 
         let next_img = bg_mgr.get_next();
@@ -219,8 +203,151 @@ pub fn main_loop(config: LeaffrontConfig) {
             None => {}
         }
 
-        // Begin render
         drawer.start();
+
+        match &state {
+            &ScreenState::Day(..) => {
+                drawer.clear(true);
+            }
+            &ScreenState::Night => {
+                drawer.clear(false);
+            }
+        }
+
+        drawer.enable_blending();
+
+        let screen_width = drawer.get_width();
+        let screen_height = drawer.get_height();
+
+        if let Some(mut root) = begin_root(&mut drawer, vec![&mut font], (screen_width, screen_height)) {
+
+            match &state {
+                &ScreenState::Day(ref subtitle) => {
+                    root.style.window.background = Color::new_4byte(0, 0, 0, 170);
+                    root.style.text.color = Color::new_3byte(255, 255, 255);
+                    root.style.text.size = 50;
+
+                    let window_height = 120f32 / (screen_height as f32);
+
+                    if let Some(mut window) = root.begin_window(
+                        WindowOptions {
+                            position: (0f32, 1.0f32 - window_height),
+                            size: (1.0, window_height),
+                            decorations: false,
+                            ..WindowOptions::default()
+                        }
+                    ) {
+                        let datetime = Local::now();
+                        let time = datetime.format("%-I:%M:%S %P").to_string();
+                        let msg = format!("{}", time);
+
+                        window.text(msg);
+
+                        match subtitle {
+                            &Message::Date => {
+                                let suffix = match datetime.day() {
+                                    1 | 21 | 31 => "st",
+                                    2 | 22 => "nd",
+                                    3 | 23 => "rd",
+                                    _ => "th",
+                                };
+
+                                let msg = format!(
+                                    "{}{} of {}",
+                                    datetime.format("%A, %-d").to_string(),
+                                    suffix,
+                                    datetime.format("%B").to_string()
+                                );
+
+                                window.text(msg);
+                            }
+                            &Message::Weather => {
+                                let weather = weather_manager.get();
+                                let msg = match weather {
+                                    Ok(weather) => {
+                                        format!("{}°C - {}", weather.temperature.round(), weather.description)
+                                    }
+                                    Err(msg) => msg,
+                                };
+
+
+                                window.text(msg);
+                            }
+                        }
+                    }
+                }
+                &ScreenState::Night => {
+                    /*drawer.clear(false);
+
+                    // Render out both the top and bottom strings, and center them.
+                    let datetime = Local::now();
+                    let top_msg = datetime.format("%-I:%M:%S %P").to_string();
+                    let top_length = font.get_width(&top_msg, 50);
+                    let top_two = top_length / 2;
+
+                    let suffix = match datetime.day() {
+                        1 | 21 | 31 => "st",
+                        2 | 22 => "nd",
+                        3 | 23 => "rd",
+                        _ => "th",
+                    };
+
+                    let bottom_msg = format!(
+                        "{}{} of {}",
+                        datetime.format("%A, %-d").to_string(),
+                        suffix,
+                        datetime.format("%B").to_string()
+                    );
+                    let bottom_length = font.get_width(&bottom_msg, 50);
+                    let bottom_two = bottom_length / 2;
+
+                    if state_countdown.elapsed() > Duration::from_secs(config.night.move_secs)
+                        || night_x == -1
+                    {
+                        state_countdown = Instant::now();
+
+                        // Set new random position
+                        // Calculate maximum ranges
+                        let max_width = if top_two > bottom_two {
+                            top_two
+                        } else {
+                            bottom_two
+                        };
+                        let max_x = screen_width - max_width;
+                        let min_x = max_width;
+
+                        let min_y = 50; // For font
+                        let max_y = screen_height - 50 * 3; // For font + gap
+
+                        night_x = rng.gen_range(min_x, max_x);
+                        night_y = rng.gen_range(min_y, max_y);
+                    }
+
+                    let top_x = night_x - top_two;
+                    let bottom_x = night_x - bottom_two;
+
+                    drawer.enable_blending();
+
+                    font.draw(
+                        &top_msg,
+                        &Color::new_3byte(255, 255, 255),
+                        50,
+                        &Position::new(top_x, night_y),
+                        &mut drawer,
+                    );
+                    font.draw(
+                        &bottom_msg,
+                        &Color::new_3byte(255, 255, 255),
+                        50,
+                        &Position::new(bottom_x, night_y + 50),
+                        &mut drawer,
+                    );*/
+                }
+            }
+        }
+
+        // Begin render
+        /*drawer.start();
         let screen_width = drawer.get_width() as i32;
         let screen_height = drawer.get_height() as i32;
 
