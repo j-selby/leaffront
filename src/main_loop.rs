@@ -10,11 +10,17 @@ use leaffront_weather::manager::WeatherManager;
 
 use leaffront_ui::*;
 
-use background::manager::BackgroundManager;
+use crate::background::manager::BackgroundManager;
 
-use state::DisplayNotification;
-use state::Message;
-use state::ScreenState;
+use crate::state::DisplayNotification;
+use crate::state::Message;
+use crate::state::ScreenState;
+
+use crate::clock::check_night;
+
+use crate::config::LeaffrontConfig;
+
+use crate::platform::*;
 
 use chrono::Datelike;
 use chrono::Local;
@@ -22,18 +28,11 @@ use chrono::Local;
 use rand::thread_rng;
 use rand::Rng;
 
-use std::thread;
 use std::time::Duration;
 use std::time::Instant;
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
-
-use clock::check_night;
-
-use config::LeaffrontConfig;
-
-use platform::*;
 
 use ctrlc;
 use std::cmp::max;
@@ -51,7 +50,7 @@ pub fn main_loop(config: LeaffrontConfig) {
     let mut drawer = DrawerImpl::new();
 
     // Startup input handling
-    let mut input = InputImpl::new();
+    let input = InputImpl::new();
 
     // Check the startup time
     let mut state = if check_night(start_night, end_night) {
@@ -78,7 +77,7 @@ pub fn main_loop(config: LeaffrontConfig) {
     let mut weather_manager = WeatherManager::new(
         config.weather.update_freq * 60 * 1000,
         config.weather.kind,
-        config.weather.config,
+        config.weather.config.clone(),
     );
 
     let mut rng = thread_rng();
@@ -87,7 +86,7 @@ pub fn main_loop(config: LeaffrontConfig) {
     let mut night_cooldown = Instant::now();
 
     // Update the background
-    let bg_mgr = BackgroundManager::new(config.art_dir);
+    let bg_mgr = BackgroundManager::new(config.art_dir.clone());
     let mut bg_countdown = Instant::now();
     bg_mgr.next();
 
@@ -110,11 +109,9 @@ pub fn main_loop(config: LeaffrontConfig) {
 
     println!("Initialised successfully");
 
-    while running.load(Ordering::SeqCst) {
-        input.update(&mut drawer);
-
-        if !input.do_continue() {
-            break;
+    input.run(drawer, move |input, drawer| {
+        if !running.load(Ordering::SeqCst) || !input.do_continue() {
+            return (false, Instant::now());
         }
 
         // Handle incoming notifications
@@ -207,9 +204,7 @@ pub fn main_loop(config: LeaffrontConfig) {
         let screen_width = drawer.get_width();
         let screen_height = drawer.get_height();
 
-        if let Some(mut root) =
-            begin_root(&mut drawer, vec![&mut font], (screen_width, screen_height))
-        {
+        if let Some(mut root) = begin_root(drawer, vec![&mut font], (screen_width, screen_height)) {
             match &state {
                 &ScreenState::Day(ref subtitle) => {
                     root.style.window.background = Color::new_4byte(0, 0, 0, 170);
@@ -346,20 +341,23 @@ pub fn main_loop(config: LeaffrontConfig) {
                 &Color::new_3byte(255, 255, 255),
                 30,
                 &Position::new(x + 10, y + 20),
-                &mut drawer,
+                drawer,
             );
             font.draw(
                 &notification.source.contents,
                 &Color::new_3byte(255, 255, 255),
                 20,
                 &Position::new(x + 10, y + 40),
-                &mut drawer,
+                drawer,
             );
             y += 120;
         }
 
         drawer.end();
 
-        thread::sleep(Duration::from_millis(config.refresh_rate));
-    }
+        (
+            true,
+            Instant::now() + Duration::from_millis(config.refresh_rate),
+        )
+    });
 }

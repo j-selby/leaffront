@@ -6,8 +6,10 @@ extern crate evdev;
 use leaffront_core::input::Input;
 use leaffront_core::version::VersionInfo;
 
-use leaffront_render_pi::drawer::PiDrawer;
 use evdev::{DeviceState, RawEvents};
+use leaffront_render_pi::drawer::PiDrawer;
+use std::time::{Duration, Instant};
+use std::{process, thread};
 
 /// Implements a basic input mechanism for the Pi through evdev.
 pub struct PiInput {
@@ -31,9 +33,50 @@ impl PiInput {
         }
     }
 
+    /// Updates input
+    fn update(&mut self) {
+        let mut input = Vec::new();
+        self.devices
+            .retain(|mut device| match device.events_no_sync() {
+                Ok(events) => {
+                    for evt in events {
+                        input.push(evt);
+                    }
+                    true
+                }
+                Err(e) => {
+                    println!("Device {:?} failed to send events: {:?}", device.name(), e);
+                    false
+                }
+            });
+
+        let mut touched = false;
+
+        for input in input {
+            if input._type == ABSOLUTE.number() {
+                touched = true;
+                match input.code {
+                    EV_ABS::ABS_X => {
+                        println!("Got X abs event!");
+                        self.mouse_x = input.value as usize;
+                    }
+                    EV_ABS::ABS_Y => {
+                        println!("Got Y abs event!");
+                        self.mouse_y = input.value as usize;
+                    }
+                    x => {
+                        println!("Got unknown event: {:?}", x);
+                    }
+                }
+            }
+        }
+
+        self.mouse_down = touched;
+    }
+
     pub fn new() -> Self {
         let mut input = PiInput {
-            devices : Vec::new(),
+            devices: Vec::new(),
             mouse_x: 0,
             mouse_y: 0,
             mouse_down: false,
@@ -48,47 +91,26 @@ impl PiInput {
 impl Input for PiInput {
     type Window = PiDrawer;
 
-    /// Updates input
-    fn update(&mut self, _: &mut Self::Window) {
-        let mut input = Vec::new();
-        self.devices.retain(|mut device| {
-            match device.events_no_sync() {
-                Ok(events) => {
-                    for evt in events {
-                        input.push(evt);
-                    }
-                    true
-                },
-                Err(e) => {
-                    println!("Device {:?} failed to send events: {:?}", device.name(), e);
-                    false
-                }
+    fn run<T: FnMut(&Self, &mut Self::Window) -> (bool, Instant) + 'static>(
+        mut self,
+        mut drawer: Self::Window,
+        function: T,
+    ) -> ! {
+        loop {
+            self.update();
+
+            let (do_continue, wait_for) = function(&mut self, &mut drawer);
+            if !do_continue {
+                break;
             }
-        });
 
-        let mut touched = false;
-
-        for input in input {
-            if input._type == ABSOLUTE.number() {
-                touched = true;
-                match input.code {
-                    EV_ABS::ABS_X => {
-                        println!("Got X abs event!");
-                        self.mouse_x = input.value as usize;
-                    },
-                    EV_ABS::ABS_Y => {
-                        println!("Got Y abs event!");
-                        self.mouse_y = input.value as usize;
-                    },
-                    x => {
-                        println!("Got unknown event: {:?}", x);
-                    }
-                }
-
+            let duration = wait_for - Instant::now();
+            if duration > Duration::default() {
+                thread::sleep(duration);
             }
         }
 
-        self.mouse_down = touched;
+        process::exit(0)
     }
 
     /// Checks to see if the mouse/pointer is down
@@ -96,13 +118,13 @@ impl Input for PiInput {
         self.mouse_down
     }
 
+    fn get_mouse_pos(&self) -> (usize, usize) {
+        (self.mouse_x, self.mouse_y)
+    }
+
     // No way of telling this
     fn do_continue(&self) -> bool {
         true
-    }
-
-    fn get_mouse_pos(&self) -> (usize, usize) {
-        (self.mouse_x, self.mouse_y)
     }
 }
 

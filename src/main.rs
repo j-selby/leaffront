@@ -1,6 +1,6 @@
 extern crate leaffront_core;
-extern crate leaffront_weather;
 extern crate leaffront_ui;
+extern crate leaffront_weather;
 
 #[cfg(feature = "raspberry_pi")]
 extern crate leaffront_input_pi;
@@ -58,7 +58,8 @@ fn main() {
              along with basic clock, date and weather information. \
              Most values can be configured, and is lightweight enough that other \
              applications can be run alongside to enhance the experience.",
-        ).arg(
+        )
+        .arg(
             Arg::with_name("config")
                 .short("c")
                 .long("config")
@@ -67,13 +68,15 @@ fn main() {
                 .value_name("FILE")
                 .required(false)
                 .takes_value(true),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("version")
                 .short("v")
                 .long("version")
                 .help("Shows version information and exits.")
                 .required(false),
-        ).get_matches();
+        )
+        .get_matches();
 
     if matches.is_present("version") {
         println!("Leaffront {}", VERSION);

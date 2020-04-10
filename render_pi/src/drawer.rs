@@ -175,7 +175,8 @@ impl PiDrawer {
         let colored_shader = GLSLShader::create_shader(
             include_bytes!("../res/shaders/color.vert"),
             include_bytes!("../res/shaders/color.frag"),
-        ).unwrap();
+        )
+        .unwrap();
 
         colored_shader.use_program();
         let attr_colored_vertex = colored_shader.get_attribute("input_vertex");
@@ -184,7 +185,8 @@ impl PiDrawer {
         let textured_shader = GLSLShader::create_shader(
             include_bytes!("../res/shaders/tex.vert"),
             include_bytes!("../res/shaders/tex.frag"),
-        ).unwrap();
+        )
+        .unwrap();
 
         textured_shader.use_program();
         let attr_textured_vertex = textured_shader.get_attribute("input_vertex");

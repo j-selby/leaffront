@@ -1,14 +1,16 @@
 //! Defines basic types about weather
 
 extern crate reqwest;
-#[macro_use]
 extern crate serde;
-extern crate toml;
+#[macro_use]
+extern crate serde_derive;
+extern crate futures_util;
 extern crate inflector;
+extern crate toml;
 
 pub mod bom;
-pub mod openweathermap;
 pub mod manager;
+pub mod openweathermap;
 
 #[derive(Clone)]
 pub struct Weather {
@@ -17,12 +19,12 @@ pub struct Weather {
 }
 
 pub trait WeatherProvider {
-    fn get_weather(config : Option<toml::Value>) -> Result<Weather, String>;
+    fn get_weather(config: Option<toml::Value>) -> Result<Weather, String>;
 }
 
 /// What weather providers are available:
 #[derive(Copy, Clone, Deserialize, Debug)]
 pub enum WeatherProviderKind {
     OpenWeatherMap,
-    BOM
+    BOM,
 }
