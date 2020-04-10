@@ -102,6 +102,17 @@ where
         })
     }
 
+    fn begin_align<'a>(&'a mut self, kind : AlignmentKind) -> Option<Alignment<'a, 'font_data_life, DrawInstance, Self>> {
+        let style_info = self.get_style_info().to_owned();
+        Some(Alignment {
+            parent: self,
+            parent_font_life: PhantomData {},
+            widgets: Vec::new(),
+            style: style_info,
+            direction: kind
+        })
+    }
+
     /// Draws some text to the screen. Customise using styling.
     fn text<T: Display>(&mut self, message: T) {
         self.add_widget(Text {
@@ -592,11 +603,157 @@ impl<DrawInstance: 'static + Drawer> CompletedWidget<DrawInstance>
     }
 
     fn get_vertical_sizing_policy(&self, drawer: &DrawContext<DrawInstance>) -> SizingPolicy {
+        // TODO: Can we calculate this from our child widgets?
         SizingPolicy::Expanding
     }
 
     fn get_horizontal_sizing_policy(&self, drawer: &DrawContext<DrawInstance>) -> SizingPolicy {
+        // TODO: Can we calculate this from our child widgets?
         SizingPolicy::Expanding
+    }
+}
+
+/// A direction in which an element can be aligned.
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
+pub enum AlignmentKind {
+    HLeft, HCenter, HRight,
+    VTop, VMiddle, VBottom
+}
+
+/// An Alignment object aligns an inner widget to be center aligned along some axis.
+pub struct Alignment<
+    'parent,
+    'font_data_life,
+    DrawInstance: 'static + Drawer,
+    T: WidgetContainer<'font_data_life, DrawInstance>,
+> {
+    parent: &'parent mut T,
+    parent_font_life: PhantomData<&'font_data_life ()>,
+
+    direction: AlignmentKind,
+    widgets: Vec<Box<dyn CompletedWidget<DrawInstance>>>,
+    pub style: Style,
+}
+
+impl<
+    'parent,
+    'font_data_life,
+    DrawInstance: 'static + Drawer,
+    T: WidgetContainer<'font_data_life, DrawInstance>,
+> Drop for Alignment<'parent, 'font_data_life, DrawInstance, T>
+{
+    fn drop(&mut self) {
+        self.parent.add_widget(CompletedAlignment {
+            widgets: self.widgets.split_off(0),
+            style: self.style.clone(),
+            direction: self.direction,
+        })
+    }
+}
+
+impl<
+    'parent,
+    'font_data_life,
+    DrawInstance: 'static + Drawer,
+    T: WidgetContainer<'font_data_life, DrawInstance>,
+> WidgetContainer<'font_data_life, DrawInstance>
+for Alignment<'parent, 'font_data_life, DrawInstance, T>
+{
+    fn add_widget<Widget: 'static + CompletedWidget<DrawInstance>>(&mut self, widget: Widget) {
+        self.widgets.push(Box::new(widget));
+    }
+
+    fn get_style_info(&self) -> &Style {
+        &self.style
+    }
+
+    fn get_font_info(&self) -> &[&mut FontCache<'font_data_life, DrawInstance::NativeTexture>] {
+        self.parent.get_font_info()
+    }
+}
+
+/// A completed alignment container, ready to display.
+struct CompletedAlignment<DrawInstance: 'static + Drawer> {
+    direction: AlignmentKind,
+    widgets: Vec<Box<dyn CompletedWidget<DrawInstance>>>,
+    pub style: Style,
+}
+
+impl<DrawInstance: 'static + Drawer> CompletedWidget<DrawInstance>
+for CompletedAlignment<DrawInstance>
+{
+    fn draw(&self, drawer: &mut DrawContext<DrawInstance>, constraints: DrawConstraints) {
+        let area_dims = constraints.dimensions.unwrap_or_else(|| (1.0, 1.0));
+
+        for widget in &self.widgets {
+            match self.direction {
+                AlignmentKind::HLeft => widget.draw(drawer, constraints), // Default
+                AlignmentKind::HCenter | AlignmentKind::HRight => {
+                    let logical_width = match widget.get_horizontal_sizing_policy(drawer) {
+                        SizingPolicy::Fixed(x) => x,
+                        SizingPolicy::FixedPhysical(y) => y as f32 / drawer.dimensions.0 as f32,
+                        SizingPolicy::Expanding => {
+                            // We can't help you here
+                            widget.draw(drawer, constraints);
+                            continue
+                        },
+                    };
+
+                    let offset = if self.direction == AlignmentKind::HCenter {
+                        area_dims.0 / 2f32 - logical_width / 2f32
+                    } else {
+                        area_dims.0 - logical_width
+                    };
+
+                    widget.draw(drawer, DrawConstraints {
+                        origin: (constraints.origin.0 + offset, constraints.origin.1),
+                        dimensions: Some((logical_width, area_dims.1))
+                    });
+                },
+                AlignmentKind::VTop => widget.draw(drawer, constraints), // Default
+                AlignmentKind::VMiddle | AlignmentKind::VBottom => {
+                    let logical_height = match widget.get_vertical_sizing_policy(drawer) {
+                        SizingPolicy::Fixed(x) => x,
+                        SizingPolicy::FixedPhysical(y) => y as f32 / drawer.dimensions.1 as f32,
+                        SizingPolicy::Expanding => {
+                            // We can't help you here
+                            widget.draw(drawer, constraints);
+                            continue
+                        },
+                    };
+
+                    let offset = if self.direction == AlignmentKind::VMiddle {
+                        area_dims.1 / 2f32 - logical_height / 2f32
+                    } else {
+                        area_dims.1 - logical_height
+                    };
+
+                    widget.draw(drawer, DrawConstraints {
+                        origin: (constraints.origin.0, constraints.origin.1 + offset),
+                        dimensions: Some((area_dims.0, logical_height))
+                    });
+                },
+            }
+        }
+    }
+
+    fn get_vertical_sizing_policy(&self, drawer: &DrawContext<DrawInstance>) -> SizingPolicy {
+        match self.direction {
+            AlignmentKind::HLeft | AlignmentKind::HCenter | AlignmentKind::HRight =>
+                self.widgets.first().expect("An alignment should have at least 1 element!")
+                    .get_vertical_sizing_policy(drawer),
+            AlignmentKind::VTop | AlignmentKind::VMiddle | AlignmentKind::VBottom => SizingPolicy::Expanding,
+        }
+    }
+
+    fn get_horizontal_sizing_policy(&self, drawer: &DrawContext<DrawInstance>) -> SizingPolicy {
+        match self.direction {
+            AlignmentKind::HLeft | AlignmentKind::HCenter | AlignmentKind::HRight =>
+                SizingPolicy::Expanding,
+            AlignmentKind::VTop | AlignmentKind::VMiddle | AlignmentKind::VBottom =>
+            self.widgets.first().expect("An alignment should have at least 1 element!")
+                .get_horizontal_sizing_policy(drawer),
+        }
     }
 }
 
