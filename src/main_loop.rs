@@ -237,41 +237,41 @@ pub fn main_loop(config: LeaffrontConfig) {
                             ..WindowOptions::default()
                         }
                     ) {
-                        let datetime = Local::now();
-                        let time = datetime.format("%-I:%M:%S %P").to_string();
-                        let msg = format!("{}", time);
+                        if let Some(mut vbox) = window.begin_vbox() {
+                            let datetime = Local::now();
 
-                        window.text(msg);
+                            vbox.text( datetime.format("%-I:%M:%S %P"));
 
-                        match subtitle {
-                            &Message::Date => {
-                                let suffix = match datetime.day() {
-                                    1 | 21 | 31 => "st",
-                                    2 | 22 => "nd",
-                                    3 | 23 => "rd",
-                                    _ => "th",
-                                };
+                            match subtitle {
+                                &Message::Date => {
+                                    let suffix = match datetime.day() {
+                                        1 | 21 | 31 => "st",
+                                        2 | 22 => "nd",
+                                        3 | 23 => "rd",
+                                        _ => "th",
+                                    };
 
-                                let msg = format!(
-                                    "{}{} of {}",
-                                    datetime.format("%A, %-d").to_string(),
-                                    suffix,
-                                    datetime.format("%B").to_string()
-                                );
+                                    let msg = format!(
+                                        "{}{} of {}",
+                                        datetime.format("%A, %-d").to_string(),
+                                        suffix,
+                                        datetime.format("%B").to_string()
+                                    );
 
-                                window.text(msg);
-                            }
-                            &Message::Weather => {
-                                let weather = weather_manager.get();
-                                let msg = match weather {
-                                    Ok(weather) => {
-                                        format!("{}°C - {}", weather.temperature.round(), weather.description)
-                                    }
-                                    Err(msg) => msg,
-                                };
+                                    vbox.text(msg);
+                                }
+                                &Message::Weather => {
+                                    let weather = weather_manager.get();
+                                    let msg = match weather {
+                                        Ok(weather) => {
+                                            format!("{}°C - {}", weather.temperature.round(), weather.description)
+                                        }
+                                        Err(msg) => msg,
+                                    };
 
 
-                                window.text(msg);
+                                    vbox.text(msg);
+                                }
                             }
                         }
                     }
