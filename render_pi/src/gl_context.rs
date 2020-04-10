@@ -20,6 +20,8 @@ pub struct Context {
     pub display: EGLDisplay,
     pub surface: EGLSurface,
 
+    // Note: We need this to remain in-scope so it doesn't get dropped early.
+    #[allow(dead_code)]
     window: Box<Window>,
     pub dispman_display: DisplayHandle,
     pub update: UpdateHandle,
