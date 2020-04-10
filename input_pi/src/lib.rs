@@ -41,6 +41,8 @@ impl PiInput {
         let mut i = 0;
         while i < self.devices.len() {
             let device = &mut self.devices[i];
+
+            // Grab the devices name, then read events from it
             match device.name().to_str().map(|x| x.to_string()) {
                 Ok(device_name) => match device.events_no_sync() {
                     Ok(events) => {
@@ -62,17 +64,14 @@ impl PiInput {
 
         let mut touched = false;
 
+        // Many events come from evdev devices - handle them
         for input in input {
             if input._type == ABSOLUTE.number() {
                 touched = true;
                 if input.code == ABS_X.number() {
-                    println!("Got X abs event!");
                     self.mouse_x = input.value as usize;
                 } else if input.code == ABS_Y.number() {
-                    println!("Got Y abs event!");
                     self.mouse_y = input.value as usize;
-                } else {
-                    println!("Got known event {}!", input.code);
                 }
             }
         }
@@ -111,6 +110,7 @@ impl Input for PiInput {
             }
 
             let duration = wait_for - Instant::now();
+            // Don't wait on negative times
             if duration > Duration::default() {
                 thread::sleep(duration);
             }
