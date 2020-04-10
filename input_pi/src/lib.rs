@@ -41,17 +41,20 @@ impl PiInput {
         let mut i = 0;
         while i < self.devices.len() {
             let device = &mut self.devices[i];
-            match device.events_no_sync() {
-                Ok(events) => {
-                    for evt in events {
-                        input.push(evt);
+            match device.name().into_string() {
+                Ok(device_name) => match device.events_no_sync() {
+                    Ok(events) => {
+                        for evt in events {
+                            input.push(evt);
+                        }
+                        i += 1;
+                        continue;
                     }
-                    i += 1;
-                    continue;
-                }
-                Err(e) => {
-                    println!("Device {:?} failed to send events: {:?}", device.name(), e);
-                }
+                    Err(e) => {
+                        println!("Device {:?} failed to send events: {:?}", device_name, e);
+                    }
+                },
+                Err(e) => println!("Failed to read device name: {:?}", e),
             }
 
             let _ = self.devices.remove(i);
