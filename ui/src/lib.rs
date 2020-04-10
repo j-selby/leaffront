@@ -78,6 +78,28 @@ where
         })
     }
 
+    fn begin_hbox<'a>(&'a mut self) -> Option<DividedBox<'a, 'font_data_life, DrawInstance, Self>> {
+        let style_info = self.get_style_info().to_owned();
+        Some(DividedBox {
+            parent: self,
+            parent_font_life : PhantomData {},
+            widgets: Vec::new(),
+            style: style_info,
+            direction: DividedBoxDirection::Horizontal
+        })
+    }
+
+    fn begin_vbox<'a>(&'a mut self) -> Option<DividedBox<'a, 'font_data_life, DrawInstance, Self>> {
+        let style_info = self.get_style_info().to_owned();
+        Some(DividedBox {
+            parent: self,
+            parent_font_life : PhantomData {},
+            widgets: Vec::new(),
+            style: style_info,
+            direction: DividedBoxDirection::Vertical
+        })
+    }
+
     /// Draws some text to the screen. Customise using styling.
     fn text<T: Display>(&mut self, message: T) {
         self.add_widget(Text {
@@ -397,13 +419,129 @@ impl<DrawInstance: 'static + Drawer> CompletedWidget<DrawInstance> for Text {
     }
 
     fn get_vertical_sizing_policy(&self) -> SizingPolicy {
+        // TODO: Don't hardcode this - calculate from font before completing
         SizingPolicy::FixedPhysical((self.style.text.size as f32 * 1.25f32) as usize)
+    }
+
+    fn get_horizontal_sizing_policy(&self) -> SizingPolicy {
+        // TODO: Don't hardcode this - calculate from font before completing
+        SizingPolicy::Expanding
+    }
+}
+
+/// The direction a divided box is operating in.
+#[derive(Copy, Clone)]
+enum DividedBoxDirection {
+    Horizontal,
+    Vertical
+}
+
+/// A DividedBox (implemented as HBox or VBox) divides some working area between elements.
+/// This respects widgets sizing requirements where possible.
+pub struct DividedBox<'parent, 'font_data_life, DrawInstance: 'static + Drawer, T : WidgetContainer<'font_data_life, DrawInstance>>
+{
+    parent: &'parent mut T,
+    parent_font_life : PhantomData<&'font_data_life ()>,
+
+    direction : DividedBoxDirection,
+    widgets: Vec<Box<dyn CompletedWidget<DrawInstance>>>,
+    pub style: Style,
+}
+
+impl<'parent, 'font_data_life, DrawInstance: 'static + Drawer, T : WidgetContainer<'font_data_life, DrawInstance>> Drop for DividedBox<'parent, 'font_data_life, DrawInstance, T>
+{
+    fn drop(&mut self) {
+        self.parent.add_widget(CompletedDividedBox {
+            widgets: self.widgets.split_off(0),
+            style: self.style.clone(),
+            direction: self.direction,
+        })
+    }
+}
+
+impl<'parent, 'font_data_life, DrawInstance: 'static + Drawer, T : WidgetContainer<'font_data_life, DrawInstance>> WidgetContainer<'font_data_life, DrawInstance>
+for DividedBox<'parent, 'font_data_life, DrawInstance, T>
+{
+    fn add_widget<Widget: 'static + CompletedWidget<DrawInstance>>(&mut self, widget: Widget) {
+        self.widgets.push(Box::new(widget));
+    }
+
+    fn get_style_info(&self) -> &Style {
+        &self.style
+    }
+
+    fn get_font_info(&self) -> &[&mut FontCache<'font_data_life, DrawInstance::NativeTexture>] {
+        self.parent.get_font_info()
+    }
+}
+
+/// A completed divided box, ready to display.
+struct CompletedDividedBox<DrawInstance : 'static + Drawer> {
+    direction : DividedBoxDirection,
+    widgets: Vec<Box<dyn CompletedWidget<DrawInstance>>>,
+    pub style: Style,
+}
+
+impl<DrawInstance: 'static + Drawer> CompletedWidget<DrawInstance> for CompletedDividedBox<DrawInstance> {
+    fn draw(&self, drawer: &mut DrawContext<DrawInstance>, constraints: DrawConstraints) {
+        let mut x = constraints.origin.0;
+        let mut y = constraints.origin.1;
+
+        let mut remaining_dims = constraints.dimensions.unwrap_or_else(|| (1.0, 1.0));
+
+        for widget in &self.widgets {
+            let policy = match self.direction {
+                DividedBoxDirection::Horizontal => widget.get_horizontal_sizing_policy(),
+                DividedBoxDirection::Vertical => widget.get_vertical_sizing_policy(),
+            };
+
+            // Calculate how much space this widget needs
+            let add_logical = match policy {
+                SizingPolicy::Fixed(x) => x,
+                SizingPolicy::FixedPhysical(y) => y as f32 / match self.direction {
+                    DividedBoxDirection::Horizontal => drawer.dimensions.0 as f32,
+                    DividedBoxDirection::Vertical => drawer.dimensions.1 as f32,
+                },
+                SizingPolicy::Expanding => match self.direction {
+                    DividedBoxDirection::Horizontal => remaining_dims.0,
+                    DividedBoxDirection::Vertical => remaining_dims.1,
+                },
+            };
+
+            // Give the full width/height of the unimportant axis, and the required
+            let allocated_size = match self.direction {
+                DividedBoxDirection::Horizontal => (add_logical, remaining_dims.1),
+                DividedBoxDirection::Vertical => (remaining_dims.0, add_logical),
+            };;
+
+            widget.draw(drawer, DrawConstraints {
+                origin: (x, y),
+                dimensions: Some(allocated_size)
+            });
+
+            // Update our internal state so we know where to allocate the next widget(s)
+            match self.direction {
+                DividedBoxDirection::Horizontal => {
+                    x += add_logical;
+                    remaining_dims.0 -= add_logical;
+                },
+                DividedBoxDirection::Vertical => {
+                    y += add_logical;
+                    remaining_dims.1 -= add_logical;
+                }
+            }
+        }
+    }
+
+    fn get_vertical_sizing_policy(&self) -> SizingPolicy {
+        SizingPolicy::Expanding
     }
 
     fn get_horizontal_sizing_policy(&self) -> SizingPolicy {
         SizingPolicy::Expanding
     }
 }
+
 
 /// Begins a new UI root. Note that this always returns true unless the UI is hidden -
 /// this is to enable consistent syntax and proper drop mechanics.
