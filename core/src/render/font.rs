@@ -56,14 +56,17 @@ impl<'a, T: Dimensions> FontCache<'a, T> {
         pos: &Position,
         draw: &mut DrawInstance,
     ) {
+        let metrics = self.font.v_metrics(Scale::uniform(size as f32));
+
         let layout = self.font.layout(
             text,
             Scale::uniform(size as f32),
             Point {
                 x: pos.x as f32,
-                y: pos.y as f32 + size as f32,
+                y: pos.y as f32 + metrics.ascent,
             },
         );
+
 
         for glyph in layout {
             // Render out texture
