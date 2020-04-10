@@ -6,7 +6,7 @@ extern crate evdev;
 use leaffront_core::input::Input;
 use leaffront_core::version::VersionInfo;
 
-use evdev::{DeviceState, RawEvents};
+use evdev::{DeviceState, RawEvents, ABSOLUTE, ABS_X, ABS_Y};
 use leaffront_render_pi::drawer::PiDrawer;
 use std::time::{Duration, Instant};
 use std::{process, thread};
@@ -26,7 +26,7 @@ impl PiInput {
         let devices = evdev::enumerate();
 
         for device in devices {
-            if device.events_supported().contains(Types::ABSOLUTE) {
+            if device.events_supported().contains(ABSOLUTE) {
                 println!("Found input device: {:?}", device.name());
                 self.devices.push(device);
             }
@@ -55,18 +55,14 @@ impl PiInput {
         for input in input {
             if input._type == ABSOLUTE.number() {
                 touched = true;
-                match input.code {
-                    EV_ABS::ABS_X => {
-                        println!("Got X abs event!");
-                        self.mouse_x = input.value as usize;
-                    }
-                    EV_ABS::ABS_Y => {
-                        println!("Got Y abs event!");
-                        self.mouse_y = input.value as usize;
-                    }
-                    x => {
-                        println!("Got unknown event: {:?}", x);
-                    }
+                if ABS_X.intersects(input.code) {
+                    println!("Got X abs event!");
+                    self.mouse_x = input.value as usize;
+                } else if ABS_Y.intersects(input.code) {
+                    println!("Got Y abs event!");
+                    self.mouse_y = input.value as usize;
+                } else {
+                    println!("Got known event {}!", input.code);
                 }
             }
         }
