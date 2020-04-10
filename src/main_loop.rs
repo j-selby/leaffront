@@ -8,6 +8,8 @@ use leaffront_core::render::Drawer;
 
 use leaffront_weather::manager::WeatherManager;
 
+use leaffront_ui::*;
+
 use background::manager::BackgroundManager;
 
 use state::DisplayNotification;
@@ -128,7 +130,23 @@ pub fn main_loop(config: LeaffrontConfig) {
         // TODO: Config time
         notifications.retain(|x| x.displayed.elapsed() < Duration::from_secs(5));
 
-        // Handle the adjustment of state
+        drawer.start();
+        drawer.enable_blending();
+
+        let screen_width = drawer.get_width();
+        let screen_height = drawer.get_height();
+        if let Some(mut root) = begin_root(&mut drawer, vec![&mut font], (screen_width, screen_height)) {
+            if let Some(mut window) = root.begin_window(
+                WindowOptions {
+                    decorations: false,
+                    ..WindowOptions::default()
+                }
+            ) {
+                window.text("Hello, World!");
+            }
+        }
+
+        /*// Handle the adjustment of state
         let touched = input.is_mouse_down();
 
         let next_img = bg_mgr.get_next();
@@ -147,6 +165,8 @@ pub fn main_loop(config: LeaffrontConfig) {
         if Instant::now() - Duration::from_secs(5) > top_touch_cooldown {
             show_top_touch = false;
         }*/
+
+        println!("{:?}", input.get_mouse_pos());
 
         let next_state = match &state {
             &ScreenState::Day(ref msg) => {
@@ -351,7 +371,7 @@ pub fn main_loop(config: LeaffrontConfig) {
                     &mut drawer,
                 );
             }
-        }
+        }*/
 
         // Draw notifications
         let mut y = 50;

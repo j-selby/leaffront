@@ -207,7 +207,7 @@ impl WeatherProvider for BOM {
                                                    format!("{}/locations/{}/observations", ENDPOINT, geohash)
                                                },
                                                &location_info.geohash)
-                .map_err(|x| format!("Failed to download BOM forecasts weather response: {:?}", x))?;
+                .map_err(|x| format!("Failed to download BOM observations weather response: {:?}", x))?;
 
         println!("Downloaded weather from BOM successfully");
 
