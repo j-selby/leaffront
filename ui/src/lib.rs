@@ -8,7 +8,7 @@ use leaffront_core::render::color::Color;
 use leaffront_core::render::font::FontCache;
 use leaffront_core::render::Drawer;
 use std::fmt::Display;
-use std::marker::{PhantomData, PhantomPinned};
+use std::marker::PhantomData;
 
 /// Specifies a constraint on where an object can be drawn.
 /// Values are from 0..1 inclusive, scaled to screen space.
@@ -409,11 +409,11 @@ impl<DrawInstance: 'static + Drawer> CompletedWidget<DrawInstance>
         }
     }
 
-    fn get_horizontal_sizing_policy(&self, drawer: &DrawContext<DrawInstance>) -> SizingPolicy {
+    fn get_horizontal_sizing_policy(&self, _drawer: &DrawContext<DrawInstance>) -> SizingPolicy {
         SizingPolicy::Fixed(self.options.size.0)
     }
 
-    fn get_vertical_sizing_policy(&self, drawer: &DrawContext<DrawInstance>) -> SizingPolicy {
+    fn get_vertical_sizing_policy(&self, _drawer: &DrawContext<DrawInstance>) -> SizingPolicy {
         SizingPolicy::Fixed(self.options.size.1)
     }
 
@@ -465,7 +465,7 @@ impl<DrawInstance: 'static + Drawer> CompletedWidget<DrawInstance> for Text {
         )
     }
 
-    fn get_vertical_sizing_policy(&self, drawer: &DrawContext<DrawInstance>) -> SizingPolicy {
+    fn get_vertical_sizing_policy(&self, _drawer: &DrawContext<DrawInstance>) -> SizingPolicy {
         SizingPolicy::FixedPhysical(self.style.text.size as usize)
     }
 
@@ -602,12 +602,12 @@ impl<DrawInstance: 'static + Drawer> CompletedWidget<DrawInstance>
         }
     }
 
-    fn get_vertical_sizing_policy(&self, drawer: &DrawContext<DrawInstance>) -> SizingPolicy {
+    fn get_vertical_sizing_policy(&self, _drawer: &DrawContext<DrawInstance>) -> SizingPolicy {
         // TODO: Can we calculate this from our child widgets?
         SizingPolicy::Expanding
     }
 
-    fn get_horizontal_sizing_policy(&self, drawer: &DrawContext<DrawInstance>) -> SizingPolicy {
+    fn get_horizontal_sizing_policy(&self, _drawer: &DrawContext<DrawInstance>) -> SizingPolicy {
         // TODO: Can we calculate this from our child widgets?
         SizingPolicy::Expanding
     }

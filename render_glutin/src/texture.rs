@@ -3,9 +3,8 @@ use leaffront_core::render::Dimensions;
 
 use gl;
 
-use std::mem;
-
 use image::RgbaImage;
+use std::mem::MaybeUninit;
 
 pub struct GlTexture {
     width: usize,
@@ -16,10 +15,12 @@ pub struct GlTexture {
 impl GlTexture {
     /// Converts a RGBA byte array to a OpenGL reference.
     fn from_bytes(bytes: &[u8], width: usize, height: usize) -> Self {
-        let mut texture_ref = unsafe { mem::uninitialized() };
+        let mut texture_ref = MaybeUninit::uninit();
+        let texture;
         unsafe {
-            gl::GenTextures(1, &mut texture_ref);
-            gl::BindTexture(gl::TEXTURE_2D, texture_ref);
+            gl::GenTextures(1, texture_ref.as_mut_ptr());
+            texture = texture_ref.assume_init();
+            gl::BindTexture(gl::TEXTURE_2D, texture);
             gl::TexImage2D(
                 gl::TEXTURE_2D,
                 0 as gl::types::GLint,
@@ -61,7 +62,7 @@ impl GlTexture {
         return GlTexture {
             width,
             height,
-            ptr: texture_ref,
+            ptr: texture,
         };
     }
 
