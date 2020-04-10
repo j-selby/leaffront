@@ -221,6 +221,24 @@ pub fn main_loop(config: LeaffrontConfig) {
 
         if let Some(mut root) = begin_root(&mut drawer, vec![&mut font], (screen_width, screen_height)) {
 
+            if let Some(mut window) = root.begin_window(
+                WindowOptions {
+                    ..WindowOptions::default()
+                }
+            ) {
+                if let Some(mut vbox) = window.begin_vbox() {
+                    if let Some(mut align) = vbox.begin_align(AlignmentKind::HLeft) {
+                        align.text("Hello, World! But left!");
+                    }
+                    if let Some(mut align) = vbox.begin_align(AlignmentKind::HCenter) {
+                        align.text("Hello, World! But centered!");
+                    }
+                    if let Some(mut align) = vbox.begin_align(AlignmentKind::HRight) {
+                        align.text("Hello, World! But right!");
+                    }
+                }
+            }
+
             match &state {
                 &ScreenState::Day(ref subtitle) => {
                     root.style.window.background = Color::new_4byte(0, 0, 0, 170);
@@ -524,6 +542,6 @@ pub fn main_loop(config: LeaffrontConfig) {
 
         drawer.end();
 
-        thread::sleep(Duration::from_millis(config.refresh_rate));
+        //thread::sleep(Duration::from_millis(config.refresh_rate));
     }
 }
