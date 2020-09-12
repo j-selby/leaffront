@@ -36,7 +36,7 @@ leaffront-backend-null = { path = "backend_null", optional = true }
 
 [features]
 # Frontends
-raspberry_pi = ["leaffront-render-pi", "leaffront-input-pi", "redis_backend"]
+raspberry_pi = ["leaffront-render-pi", "leaffront-input-pi", "null_backend"]
 glutin = ["leaffront-render-glutin", "leaffront-input-glutin", "null_backend"]
 
 # Backends (shouldn't be accessed directly)
