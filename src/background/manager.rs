@@ -10,8 +10,7 @@ use std::path::Path;
 use std::thread;
 use std::thread::JoinHandle;
 
-use rand::thread_rng;
-use rand::Rng;
+use rand::prelude::*;
 
 use image::open;
 use image::DynamicImage;
@@ -47,6 +46,7 @@ impl BackgroundManager {
 
             let mut rng = thread_rng();
 
+            'outer_loop:
             loop {
                 match rx.recv().unwrap() {
                     BackgroundMessage::NextBackground => {}
@@ -70,19 +70,18 @@ impl BackgroundManager {
                     }
                 }
 
-                if new_files.len() <= 0 {
-                    println!("No files found in art directory!");
-                    continue;
-                }
-
                 let mut itr = 0;
                 let bg_img = 'file: loop {
                     itr += 1;
 
                     // Randomly select file
-                    let file = rng.gen_range(0, new_files.len());
-
-                    let file: &DirEntry = &new_files[file];
+                    let file = match new_files.choose(&mut rng) {
+                        Some(file) => file,
+                        None => {
+                            println!("No files found in art directory!");
+                            continue 'outer_loop;
+                        }
+                    };
 
                     // TODO: Use hardware decoder?
                     let bg_img = open(file.path());

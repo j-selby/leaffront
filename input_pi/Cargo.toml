@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["James <jselby@jselby.net>"]
 
 [dependencies]
-evdev = "0.10.1"
+evdev = "0.11.0"
 
 leaffront-core = { path = "../core" }
 

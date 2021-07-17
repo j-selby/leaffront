@@ -11,15 +11,17 @@ edition = "2018"
 [dependencies]
 serde = "1.0"
 serde_derive = "1.0"
-toml = "0.5.6"
-clap = "2.33.0"
+toml = "0.5.8"
+clap = "2.33.3"
 
-chrono = "0.4.11"
+chrono = "0.4.19"
 
-ctrlc = "3.1.4"
+ctrlc = "3.1.9"
 
-image = "0.23.3"
-rand = "0.7.3"
+image = "0.23.14"
+rand = "0.8.4"
+
+egui = "0.13.1"
 
 leaffront-core = { path = "core" }
 leaffront-weather = { path = "weather" }

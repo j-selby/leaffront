@@ -148,13 +148,19 @@ pub trait Drawer {
         self.draw_colored_vertices(&vertices, &colors)
     }
 
-    /// Converts a rectangle to 4 vertices
-    fn rect_to_vertices(&self, rect: &Rect) -> [f32; 12] {
-        // Translate to OpenGL coordinates
+    /// Converts a rectangle to a minimum and maximum bounding point
+    fn rect_to_min_max(&self, rect: &Rect) -> ((f32, f32), (f32, f32)) {
         let min_x = (rect.x as f32) / self.get_width() as f32 * 2.0 - 1.0;
         let max_x = ((rect.x + rect.width) as f32) / self.get_width() as f32 * 2.0 - 1.0;
         let min_y = (rect.y as f32) / self.get_height() as f32 * 2.0 - 1.0;
         let max_y = ((rect.y + rect.height) as f32) / self.get_height() as f32 * 2.0 - 1.0;
+
+        ((min_x, min_y), (max_x, max_y))
+    }
+    /// Converts a rectangle to 4 vertices
+    fn rect_to_vertices(&self, rect: &Rect) -> [f32; 12] {
+        // Translate to OpenGL coordinates
+        let ((min_x, min_y), (max_x, max_y)) = self.rect_to_min_max(rect);
 
         // Generate vertex data
         // Inverted due to OpenGL perspective
@@ -164,4 +170,10 @@ pub trait Drawer {
             min_x, -min_y, max_x, -min_y, max_x, -max_y,
         ]
     }
+
+    /// Clips the current render to the specified location
+    fn start_clip(&self, rect: &Rect);
+
+    /// Finishes any clipping operation
+    fn end_clip(&self);
 }
