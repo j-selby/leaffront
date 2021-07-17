@@ -174,12 +174,8 @@ pub fn main_loop(config: LeaffrontConfig) {
         // Handle the adjustment of state
         let touched = input.is_mouse_down();
 
-        let next_img = bg_mgr.get_next();
-        match next_img {
-            Some(img) => {
-                drawer.set_background(img);
-            }
-            _ => {}
+        if let Some(next_img) =  bg_mgr.get_next() {
+            drawer.set_background(next_img);
         }
 
         let next_state = match &state {
