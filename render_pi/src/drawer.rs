@@ -24,6 +24,7 @@ use vbo::GLVBO;
 use leaffront_core::render::texture::Texture;
 use leaffront_core::render::Drawer;
 use leaffront_core::version::VersionInfo;
+use leaffront_core::pos::Rect;
 
 #[derive(Ord, PartialOrd, Eq, PartialEq)]
 enum DrawState {
@@ -245,8 +246,10 @@ impl Drawer for PiDrawer {
 
     /// Enables blending of alpha textures. Disabled at end of frame.
     fn enable_blending(&mut self) {
+        gl::disable(gl::GL_CULL_FACE);
+        gl::enable(gl::GL_SCISSOR_TEST);
         gl::enable(gl::GL_BLEND);
-        gl::blend_func(gl::GL_SRC_ALPHA, gl::GL_ONE_MINUS_SRC_ALPHA);
+        gl::blend_func(gl::GL_ONE, gl::GL_ONE_MINUS_SRC_ALPHA);
     }
 
     fn convert_native_texture(&mut self, texture: Texture) -> Self::NativeTexture {
@@ -281,7 +284,7 @@ impl Drawer for PiDrawer {
         texture.bind_texture(gl::GL_TEXTURE_2D);
 
         gl::draw_arrays(
-            gl::GL_TRIANGLE_STRIP,
+            gl::GL_TRIANGLES,
             0,
             (vertices.len() / 2) as gl::GLsizei,
         );
@@ -422,6 +425,28 @@ impl Drawer for PiDrawer {
 
     fn get_transition_count(&self) -> usize {
         self.transitions
+    }
+
+    fn start_clip(&self, rect: &Rect) {
+        let min_x = rect.x;
+        let min_y = rect.y;
+        let max_x = rect.x + rect.width;
+        let max_y = rect.y + rect.height;
+
+        unsafe {
+            gl::scissor(
+                min_x as _,
+                self.get_height() as i32 - max_y as i32,
+                (max_x - min_x) as _,
+                (max_y - min_y) as _
+            )
+        }
+    }
+
+    fn end_clip(&self) {
+        unsafe {
+            gl::disable(gl::GL_SCISSOR_TEST);
+        }
     }
 }
 

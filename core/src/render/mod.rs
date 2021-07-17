@@ -1,5 +1,4 @@
 pub mod color;
-pub mod font;
 pub mod texture;
 
 use pos::Position;

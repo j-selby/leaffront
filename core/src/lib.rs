@@ -1,5 +1,4 @@
 extern crate image;
-extern crate rusttype;
 
 pub mod backend;
 pub mod input;

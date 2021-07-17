@@ -75,9 +75,7 @@ pub fn main_loop(config: LeaffrontConfig) {
 
     let mut state_countdown = Instant::now();
 
-    let font_data = include_bytes!("../res/Lato-Regular.ttf");
-
-    //let mut font = FontCache::from_bytes(font_data);
+    //let font_data = include_bytes!("../res/Lato-Regular.ttf");
 
     let mut weather_manager = WeatherManager::new(
         config.weather.update_freq * 60 * 1000,
@@ -362,26 +360,20 @@ pub fn main_loop(config: LeaffrontConfig) {
         }
 
         // Draw notifications
-        /*let mut y = 50;
-        let x = drawer.get_width() as i32 - 300 - 50;
-        for notification in &notifications {
-            drawer.draw_colored_rect(&Rect::new(x, y, 300, 100), &Color::new_4byte(0, 0, 0, 170));
-            font.draw(
-                &notification.source.name,
-                &Color::new_3byte(255, 255, 255),
-                30,
-                &Position::new(x + 10, y + 20),
-                drawer,
-            );
-            font.draw(
-                &notification.source.contents,
-                &Color::new_3byte(255, 255, 255),
-                20,
-                &Position::new(x + 10, y + 40),
-                drawer,
-            );
-            y += 120;
-        }*/
+        for (i, notification) in notifications.iter().enumerate() {
+            egui::Window::new(format!("Night Display {}", i))
+                .enabled(true)
+                .resizable(false)
+                .scroll(false)
+                .anchor(Align2::RIGHT_TOP, (-10.0, 50.0 + (i as f32 * 120.0)))
+                .auto_sized()
+                .collapsible(false)
+                .title_bar(false)
+                .show(&egui_ctx, |ui| {
+                    ui.heading(notification.source.name.to_owned());
+                    ui.heading(notification.source.contents.to_owned());
+                });
+        }
 
         let (_output, bounding) = egui_ctx.end_frame();
 
@@ -409,37 +401,35 @@ pub fn main_loop(config: LeaffrontConfig) {
         let egui_texture = egui_texture.as_ref().expect("Texture should be defined by now!");
 
         for ClippedMesh(clip_rect, mesh) in shapes {
-            //for mesh in mesh.split_to_u16() {
-                // Translate the vertexes into points we can use
-                let mut positions = Vec::with_capacity(16);
-                let mut colors = Vec::with_capacity(24);
-                let mut uv = Vec::with_capacity(16);
+            // Translate the vertexes into points we can use
+            let mut positions = Vec::with_capacity(16);
+            let mut colors = Vec::with_capacity(24);
+            let mut uv = Vec::with_capacity(16);
 
-                for index in mesh.indices {
-                    let vertex = &mesh.vertices[index as usize];
-                    positions.push(vertex.pos.x / drawer.get_width() as f32 * 2.0 - 1.0);
-                    positions.push((vertex.pos.y / drawer.get_height() as f32 * 2.0 - 1.0) * -1.0);
+            for index in mesh.indices {
+                let vertex = &mesh.vertices[index as usize];
+                positions.push(vertex.pos.x / drawer.get_width() as f32 * 2.0 - 1.0);
+                positions.push((vertex.pos.y / drawer.get_height() as f32 * 2.0 - 1.0) * -1.0);
 
-                    colors.push((vertex.color.r() as f32) / 255.0);
-                    colors.push((vertex.color.g() as f32) / 255.0);
-                    colors.push((vertex.color.b() as f32) / 255.0);
-                    colors.push((vertex.color.a() as f32) / 255.0);
+                colors.push((vertex.color.r() as f32) / 255.0);
+                colors.push((vertex.color.g() as f32) / 255.0);
+                colors.push((vertex.color.b() as f32) / 255.0);
+                colors.push((vertex.color.a() as f32) / 255.0);
 
-                    uv.push(vertex.uv.x);
-                    uv.push(vertex.uv.y);
-                }
+                uv.push(vertex.uv.x);
+                uv.push(vertex.uv.y);
+            }
 
-                drawer.start_clip(&Rect::new(clip_rect.min.x as _, clip_rect.min.y as _, (clip_rect.max.x - clip_rect.min.x) as _, (clip_rect.max.y - clip_rect.min.y) as _));
+            drawer.start_clip(&Rect::new(clip_rect.min.x as _, clip_rect.min.y as _, (clip_rect.max.x - clip_rect.min.x) as _, (clip_rect.max.y - clip_rect.min.y) as _));
 
-                drawer.draw_textured_vertices_colored_uv(
-                    egui_texture,
-                    positions.as_slice(),
-                    colors.as_slice(),
-                    uv.as_slice()
-                );
+            drawer.draw_textured_vertices_colored_uv(
+                egui_texture,
+                positions.as_slice(),
+                colors.as_slice(),
+                uv.as_slice()
+            );
 
-                drawer.end_clip();
-            //s}
+            drawer.end_clip();
         }
 
         drawer.end();
