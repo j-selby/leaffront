@@ -1,6 +1,5 @@
 /// Allows for the caching of fonts.
 use rusttype::Font;
-use rusttype::FontCollection;
 use rusttype::GlyphId;
 use rusttype::Point;
 use rusttype::Scale;
@@ -13,6 +12,7 @@ use render::Dimensions;
 use render::Drawer;
 
 use std::collections::BTreeMap;
+use std::cmp::max;
 
 #[derive(Clone, Hash, Ord, PartialOrd, Eq, PartialEq)]
 struct CachedGlyph {
@@ -47,7 +47,7 @@ impl<'a, T: Dimensions> FontCache<'a, T> {
         width
     }
 
-    /// Draws the specified string to the screen.
+    /// Draws the specified single-line string to the screen.
     pub fn draw<DrawInstance: Drawer<NativeTexture = T>>(
         &mut self,
         text: &str,
@@ -107,7 +107,6 @@ impl<'a, T: Dimensions> FontCache<'a, T> {
                 self.cache.insert(id.clone(), opengl_tex);
             }
 
-            // TODO: Layout text vertically
             let tex = &self.cache[&id];
 
             // Setup vertice data
@@ -118,12 +117,105 @@ impl<'a, T: Dimensions> FontCache<'a, T> {
         }
     }
 
+    /// Draws multiple lines of text, bounded by a bounding box.
+    ///
+    /// Returns the physical space used by the line drawer.
+    pub fn draw_lines<DrawInstance: Drawer<NativeTexture = T>>(
+        &mut self,
+        text: &str,
+        color: &Color,
+        size: i32,
+        pos: &Position,
+        bounding_box: (Option<i32>, Option<i32>),
+        draw: &mut DrawInstance,
+    ) -> (i32, i32) {
+        let metrics = self.font.v_metrics(Scale::uniform(size as f32));
+
+        // Layout the text, breaking on spaces and after dashes
+        let (bounding_x, bounding_y) = bounding_box;
+
+        let bounding_x = match bounding_x {
+            Some(x) => x,
+            None => {
+                // Not enough info - just draw and move on.
+                self.draw(text, color, size, pos, draw);
+
+                // Just a single line - return the single line metrics.
+                return (self.get_width(text, size), metrics.ascent as _);
+            }
+        };
+
+        let mut current_string = text;
+        // Where to draw the next time
+        let mut modified_pos = pos.to_owned();
+
+        // The bounded extent of the lines
+        let mut max_x = 0;
+        let mut max_y = 0;
+
+        'string_loop:
+        while current_string.len() > 0 {
+            let mut last_break_point = 0;
+            let mut last_width = 0;
+
+            let mut string_to_render = current_string;
+
+            // Make sure we haven't hit the end of our vertical space
+            if let Some(y) = bounding_y {
+                if modified_pos.y >= pos.y + y {
+                    // Out of vertical space
+                    println!("Out of vertical space! ({} >= {}), x bounding: {}", pos.y, y, bounding_x);
+                    break 'string_loop;
+                }
+            }
+
+            // Iterate through characters to find the point to end
+            'character_loop:
+            for (i, character) in current_string.char_indices() {
+                let (cut_string, _) = current_string.split_at(i);
+                let current_width = self.get_width(cut_string, size);
+
+                if character == ' ' {
+                    last_break_point = i + 1;
+                    last_width = current_width;
+                }
+
+                if current_width > bounding_x {
+                    // Time to break the line
+                    if last_break_point == 0 {
+                        // Have to cut within the word
+                        last_break_point = i;
+                    }
+
+                    let (new_string_to_render, leftovers) = current_string.split_at(last_break_point);
+                    string_to_render = new_string_to_render;
+                    current_string = leftovers;
+
+                    break 'character_loop;
+                }
+            }
+
+            // Draw this individual line
+            self.draw(string_to_render, color, size, &modified_pos, draw);
+
+            // Move our position to the next line
+            modified_pos.y += metrics.line_gap as i32;
+
+            max_x = max(max_x, last_width);
+            max_y = modified_pos.y;
+
+            // Check to see if we have drawn everything left
+            if string_to_render == current_string {
+                break 'string_loop;
+            }
+        }
+
+        (max_x, max_y)
+    }
+
     /// Creates a new cache from a .ttf file.
     pub fn from_bytes(data: &'a [u8]) -> Self {
-        let collection = FontCollection::from_bytes(data).expect("Failed to read font");
-
-        // only succeeds if collection consists of one font
-        let font = collection.into_font().unwrap();
+        let font = Font::try_from_bytes(data).expect("Failed to read font");
 
         FontCache {
             font,

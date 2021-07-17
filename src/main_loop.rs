@@ -1,14 +1,10 @@
 use leaffront_core::backend::Backend;
 use leaffront_core::input::Input;
-use leaffront_core::pos::Position;
 use leaffront_core::pos::Rect;
-use leaffront_core::render::color::Color;
-use leaffront_core::render::font::FontCache;
 use leaffront_core::render::Drawer;
+use leaffront_core::render::texture::Texture;
 
 use leaffront_weather::manager::WeatherManager;
-
-use leaffront_ui::*;
 
 use crate::background::manager::BackgroundManager;
 
@@ -35,7 +31,16 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use ctrlc;
-use std::cmp::max;
+
+use egui::{Pos2, Event, PointerButton, Align2, ClippedMesh, FontDefinitions, Frame, Vec2, Color32};
+
+fn gamma_correction(f: f32) -> f32 {
+    if f <= 0.04045 {
+        f / 12.92
+    } else {
+        ((f + 0.055) / 1.055).powf(2.4)
+    }
+}
 
 pub fn main_loop(config: LeaffrontConfig) {
     let start_night = config.sleep.sleep_hour;
@@ -72,7 +77,7 @@ pub fn main_loop(config: LeaffrontConfig) {
 
     let font_data = include_bytes!("../res/Lato-Regular.ttf");
 
-    let mut font = FontCache::from_bytes(font_data);
+    //let mut font = FontCache::from_bytes(font_data);
 
     let mut weather_manager = WeatherManager::new(
         config.weather.update_freq * 60 * 1000,
@@ -107,12 +112,54 @@ pub fn main_loop(config: LeaffrontConfig) {
     })
     .expect("Error setting Ctrl-C handler");
 
+    let mut egui_ctx = egui::CtxRef::default();
+
+    let mut default_fonts = FontDefinitions::default();
+    {
+        let (_family, size) = default_fonts.family_and_size.get_mut(&egui::TextStyle::Heading)
+            .unwrap();
+        *size += 20.0;
+    }
+
+    egui_ctx.set_fonts(default_fonts);
+
+    let mut style = egui_ctx.style().as_ref().to_owned();
+    style.spacing.window_padding = Vec2::new(15.0, 15.0);
+    style.visuals.dark_mode = true;
+    style.visuals.widgets.noninteractive.bg_fill = Color32::from_rgb(20, 20, 20);
+    style.visuals.widgets.noninteractive.fg_stroke.color = Color32::WHITE;
+    egui_ctx.set_style(style);
+
+    let start_time = Instant::now();
+
+    let mut egui_version: Option<u64> = None;
+    let mut egui_texture: Option<<DrawerImpl as Drawer>::NativeTexture> = None;
+
     println!("Initialised successfully");
 
     input.run(drawer, move |input, drawer| {
         if !running.load(Ordering::SeqCst) || !input.do_continue() {
             return (false, Instant::now());
         }
+
+        // Translate the leaffront input into egui input
+        let mut raw_input = egui::RawInput::default();
+        raw_input.screen_rect = Some(egui::Rect {
+            min: Pos2 { x: 0.0, y: 0.0 },
+            max: Pos2 { x: drawer.get_width() as _, y: drawer.get_height() as _ }
+        });
+        raw_input.pixels_per_point = Some(1.0);
+        raw_input.time = Some((Instant::now() - start_time).as_secs_f64());
+
+        let (mouse_x, mouse_y) = input.get_mouse_pos();
+        raw_input.events.push(
+            Event::PointerButton {
+                pos: Pos2::new(mouse_x as _, mouse_y as _),
+                button: PointerButton::Primary,
+                pressed: input.is_mouse_down(),
+                modifiers: Default::default()
+            }
+        );
 
         // Handle incoming notifications
         match backend.get_notification() {
@@ -201,138 +248,121 @@ pub fn main_loop(config: LeaffrontConfig) {
 
         drawer.enable_blending();
 
+        egui_ctx.begin_frame(raw_input);
+
         let screen_width = drawer.get_width();
         let screen_height = drawer.get_height();
 
-        if let Some(mut root) = begin_root(drawer, vec![&mut font], (screen_width, screen_height)) {
-            match &state {
-                &ScreenState::Day(ref subtitle) => {
-                    root.style.window.background = Color::new_4byte(0, 0, 0, 170);
-                    root.style.window.padding = 10;
-                    root.style.text.color = Color::new_3byte(255, 255, 255);
-                    root.style.text.size = 50;
+        match &state {
+            &ScreenState::Day(ref subtitle) => {
+                let datetime = Local::now();
 
-                    let window_height = 120f32 / (screen_height as f32);
+                egui::Window::new("Day Display")
+                    .enabled(true)
+                    .resizable(false)
+                    .scroll(false)
+                    .anchor(Align2::LEFT_BOTTOM, (10.0, -10.0))
+                    .auto_sized()
+                    .min_width(100.0)
+                    .min_height(70.0)
+                    .collapsible(false)
+                    .title_bar(false)
+                    .show(&egui_ctx, |ui| {
+                        ui.heading(datetime.format("%-I:%M:%S %P").to_string());
 
-                    if let Some(mut window) = root.begin_window(WindowOptions {
-                        position: (0f32, 1.0f32 - window_height),
-                        size: (1.0, window_height),
-                        decorations: false,
-                        ..WindowOptions::default()
-                    }) {
-                        if let Some(mut vbox) = window.begin_vbox() {
-                            let datetime = Local::now();
+                        match subtitle {
+                            &Message::Date => {
+                                let suffix = match datetime.day() {
+                                    1 | 21 | 31 => "st",
+                                    2 | 22 => "nd",
+                                    3 | 23 => "rd",
+                                    _ => "th",
+                                };
 
-                            vbox.text(datetime.format("%-I:%M:%S %P"));
+                                let msg = format!(
+                                    "{}{} of {}",
+                                    datetime.format("%A, %-d").to_string(),
+                                    suffix,
+                                    datetime.format("%B").to_string()
+                                );
 
-                            match subtitle {
-                                &Message::Date => {
-                                    let suffix = match datetime.day() {
-                                        1 | 21 | 31 => "st",
-                                        2 | 22 => "nd",
-                                        3 | 23 => "rd",
-                                        _ => "th",
-                                    };
+                                ui.heading(msg);
+                            }
+                            &Message::Weather => {
+                                let weather = weather_manager.get();
+                                let msg = match weather {
+                                    Ok(weather) => format!(
+                                        "{}°C - {}",
+                                        weather.temperature.round(),
+                                        weather.description
+                                    ),
+                                    Err(msg) => msg,
+                                };
 
-                                    let msg = format!(
-                                        "{}{} of {}",
-                                        datetime.format("%A, %-d").to_string(),
-                                        suffix,
-                                        datetime.format("%B").to_string()
-                                    );
-
-                                    vbox.text(msg);
-                                }
-                                &Message::Weather => {
-                                    let weather = weather_manager.get();
-                                    let msg = match weather {
-                                        Ok(weather) => format!(
-                                            "{}°C - {}",
-                                            weather.temperature.round(),
-                                            weather.description
-                                        ),
-                                        Err(msg) => msg,
-                                    };
-
-                                    vbox.text(msg);
-                                }
+                                ui.heading(msg);
                             }
                         }
-                    }
-                }
-                &ScreenState::Night => {
-                    root.style.window.padding = 0;
-                    root.style.window.background = Color::new_3byte(0, 0, 0);
-                    root.style.text.color = Color::new_3byte(255, 255, 255);
-                    root.style.text.size = 50;
 
-                    // Render out both the top and bottom strings, and center them.
-                    let datetime = Local::now();
-                    let top_msg = datetime.format("%-I:%M:%S %P").to_string();
+                    });
+            }
+            &ScreenState::Night => {
+                egui::Window::new("Night Display")
+                    .enabled(true)
+                    .resizable(false)
+                    .scroll(false)
+                    .anchor(Align2::CENTER_CENTER, (night_x, night_y))
+                    .auto_sized()
+                    .min_width(100.0)
+                    .min_height(70.0)
+                    .collapsible(false)
+                    .title_bar(false)
+                    .frame(Frame::none())
+                    .show(&egui_ctx, |ui| {
 
-                    let suffix = match datetime.day() {
-                        1 | 21 | 31 => "st",
-                        2 | 22 => "nd",
-                        3 | 23 => "rd",
-                        _ => "th",
-                    };
+                        // Render out both the top and bottom strings, and center them.
+                        let datetime = Local::now();
+                        let top_msg = datetime.format("%-I:%M:%S %P").to_string();
 
-                    let bottom_msg = format!(
-                        "{}{} of {}",
-                        datetime.format("%A, %-d").to_string(),
-                        suffix,
-                        datetime.format("%B").to_string()
-                    );
+                        let suffix = match datetime.day() {
+                            1 | 21 | 31 => "st",
+                            2 | 22 => "nd",
+                            3 | 23 => "rd",
+                            _ => "th",
+                        };
 
-                    // Get the desired size of the window we want to draw
-                    let desired_width = max(
-                        root.get_font_info()[0].get_width(&bottom_msg, root.style.text.size),
-                        root.get_font_info()[0].get_width(&top_msg, root.style.text.size),
-                    ) + 10;
-                    let desired_width = desired_width as f32 / screen_width as f32;
-                    let desired_height = root.style.text.size * 2;
-                    let desired_height = desired_height as f32 / screen_height as f32;
+                        let bottom_msg = format!(
+                            "{}{} of {}",
+                            datetime.format("%A, %-d").to_string(),
+                            suffix,
+                            datetime.format("%B").to_string()
+                        );
 
-                    if state_countdown.elapsed() > Duration::from_secs(config.night.move_secs)
-                        || night_x < 0f32
-                    {
-                        state_countdown = Instant::now();
+                        ui.vertical_centered(|ui| {
+                            ui.heading(top_msg);
+                            ui.heading(bottom_msg);
+                        });
+                    });
 
-                        // Set new random position
-                        let max_x = 1.0 - desired_width;
-                        let min_x = 0f32;
+                if state_countdown.elapsed() > Duration::from_secs(config.night.move_secs)
+                {
+                    state_countdown = Instant::now();
 
-                        // For gap:
-                        let min_y = root.style.text.size as f32 / screen_height as f32;
-                        let max_y = 1.0
-                            - desired_height
-                            - root.style.text.size as f32 / screen_height as f32;
+                    // Set new random position
+                    let max_x = screen_width as f32 - 200.0;
+                    let min_x = 200.0;
 
-                        night_x = rng.gen_range(min_x, max_x);
-                        night_y = rng.gen_range(min_y, max_y);
-                    }
+                    // For gap:
+                    let min_y = 200.0;
+                    let max_y = screen_height as f32 - 200.0;
 
-                    if let Some(mut window) = root.begin_window(WindowOptions {
-                        position: (night_x, night_y),
-                        size: (desired_width, desired_height),
-                        decorations: false,
-                        ..WindowOptions::default()
-                    }) {
-                        if let Some(mut vbox) = window.begin_vbox() {
-                            if let Some(mut alignment) = vbox.begin_align(AlignmentKind::HCenter) {
-                                alignment.text(top_msg);
-                            }
-                            if let Some(mut alignment) = vbox.begin_align(AlignmentKind::HCenter) {
-                                alignment.text(bottom_msg);
-                            }
-                        }
-                    }
+                    night_x = rng.gen_range(min_x .. max_x) - screen_width as f32 / 2.0;
+                    night_y = rng.gen_range(min_y .. max_y) - screen_height as f32 / 2.0;
                 }
             }
         }
 
         // Draw notifications
-        let mut y = 50;
+        /*let mut y = 50;
         let x = drawer.get_width() as i32 - 300 - 50;
         for notification in &notifications {
             drawer.draw_colored_rect(&Rect::new(x, y, 300, 100), &Color::new_4byte(0, 0, 0, 170));
@@ -351,6 +381,65 @@ pub fn main_loop(config: LeaffrontConfig) {
                 drawer,
             );
             y += 120;
+        }*/
+
+        let (_output, bounding) = egui_ctx.end_frame();
+
+        let texture = egui_ctx.texture();
+        let shapes = egui_ctx.tessellate(bounding);
+
+        if egui_version != Some(texture.version) {
+            egui_version = Some(texture.version);
+
+            let mut new_texture = Texture::new(texture.width, texture.height);
+            new_texture.tex_data = texture.srgba_pixels().map(|x| {
+                let mut data = x.to_array();
+                for (i, val) in &mut data.iter_mut().enumerate() {
+                    if i == 3 {
+                        break;
+                    }
+                    *val = (gamma_correction(*val as f32 / 255.0) * 255.0) as u8;
+                }
+                data
+            }).flatten().collect();
+
+            egui_texture = Some(<DrawerImpl as Drawer>::NativeTexture::from_texture(&new_texture));
+        }
+
+        let egui_texture = egui_texture.as_ref().expect("Texture should be defined by now!");
+
+        for ClippedMesh(clip_rect, mesh) in shapes {
+            //for mesh in mesh.split_to_u16() {
+                // Translate the vertexes into points we can use
+                let mut positions = Vec::with_capacity(16);
+                let mut colors = Vec::with_capacity(24);
+                let mut uv = Vec::with_capacity(16);
+
+                for index in mesh.indices {
+                    let vertex = &mesh.vertices[index as usize];
+                    positions.push(vertex.pos.x / drawer.get_width() as f32 * 2.0 - 1.0);
+                    positions.push((vertex.pos.y / drawer.get_height() as f32 * 2.0 - 1.0) * -1.0);
+
+                    colors.push((vertex.color.r() as f32) / 255.0);
+                    colors.push((vertex.color.g() as f32) / 255.0);
+                    colors.push((vertex.color.b() as f32) / 255.0);
+                    colors.push((vertex.color.a() as f32) / 255.0);
+
+                    uv.push(vertex.uv.x);
+                    uv.push(vertex.uv.y);
+                }
+
+                drawer.start_clip(&Rect::new(clip_rect.min.x as _, clip_rect.min.y as _, (clip_rect.max.x - clip_rect.min.x) as _, (clip_rect.max.y - clip_rect.min.y) as _));
+
+                drawer.draw_textured_vertices_colored_uv(
+                    egui_texture,
+                    positions.as_slice(),
+                    colors.as_slice(),
+                    uv.as_slice()
+                );
+
+                drawer.end_clip();
+            //s}
         }
 
         drawer.end();

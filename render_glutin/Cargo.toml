@@ -4,8 +4,8 @@ version = "0.1.0"
 authors = ["James <jselby@jselby.net>"]
 
 [dependencies]
-glutin = "0.24.0"
-image = "0.23.3"
+glutin = "0.27.0"
+image = "0.23.14"
 
 gl = "0.14.0"
 libc = "*"

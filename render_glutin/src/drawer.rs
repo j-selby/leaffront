@@ -293,8 +293,13 @@ impl Drawer for GlutinDrawer {
     /// Enables blending of alpha textures. Disabled at end of frame.
     fn enable_blending(&mut self) {
         unsafe {
+            //gl::Enable(gl::BLEND);
+            //gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
+            //gl::Enable(gl::FRAMEBUFFER_SRGB);
+            gl::Disable(gl::CULL_FACE);
+            gl::Enable(gl::SCISSOR_TEST);
             gl::Enable(gl::BLEND);
-            gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
+            gl::BlendFunc(gl::ONE, gl::ONE_MINUS_SRC_ALPHA);
         }
     }
 
@@ -335,7 +340,7 @@ impl Drawer for GlutinDrawer {
 
         unsafe {
             gl::DrawArrays(
-                gl::TRIANGLE_STRIP,
+                gl::TRIANGLES,
                 0,
                 (vertices.len() / 2) as gl::types::GLsizei,
             );
@@ -362,7 +367,7 @@ impl Drawer for GlutinDrawer {
     /// Uses the specified image as a background. This is provided as several platforms
     /// have ways to accelerate this beyond OpenGL calls.
     fn set_background(&mut self, image: DynamicImage) {
-        let image = GlTexture::from_image(&image.to_rgba());
+        let image = GlTexture::from_image(&image.to_rgba8());
         self.background = Some(image);
     }
 
@@ -374,6 +379,28 @@ impl Drawer for GlutinDrawer {
 
     fn get_transition_count(&self) -> usize {
         self.transition_count
+    }
+
+    fn start_clip(&self, rect: &Rect) {
+        let min_x = rect.x;
+        let min_y = rect.y;
+        let max_x = rect.x + rect.width;
+        let max_y = rect.y + rect.height;
+
+        unsafe {
+            gl::Scissor(
+                min_x as _,
+                self.get_height() as i32 - max_y as i32,
+                (max_x - min_x) as _,
+                (max_y - min_y) as _
+            )
+        }
+    }
+
+    fn end_clip(&self) {
+        unsafe {
+            gl::Disable(gl::SCISSOR_TEST);
+        }
     }
 }
 

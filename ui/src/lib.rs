@@ -34,8 +34,9 @@ pub enum SizingPolicy {
 /// be drawn to the screen.
 pub trait CompletedWidget<DrawInstance: Drawer> {
     /// Draws this widget to the screen.
-    /// TODO: Specify location/dimensions?
-    fn draw(&self, drawer: &mut DrawContext<DrawInstance>, constraints: DrawConstraints);
+    /// Returns actual dimensions consumed (in screen space).
+    fn draw(&self, drawer: &mut DrawContext<DrawInstance>, constraints: DrawConstraints)
+        -> (f32, f32);
 
     /// Returns the vertical sizing policy for this widget.
     fn get_vertical_sizing_policy(&self, drawer: &DrawContext<DrawInstance>) -> SizingPolicy;
@@ -302,7 +303,7 @@ struct CompletedWindow<DrawInstance: 'static + Drawer> {
 impl<DrawInstance: 'static + Drawer> CompletedWidget<DrawInstance>
     for CompletedWindow<DrawInstance>
 {
-    fn draw(&self, drawer: &mut DrawContext<DrawInstance>, constraints: DrawConstraints) {
+    fn draw(&self, drawer: &mut DrawContext<DrawInstance>, constraints: DrawConstraints) -> (f32, f32) {
         // We don't intrinsically do layouts, so just render all widgets at an origin of 0x0.
         // TODO: Decorations
 
@@ -410,6 +411,9 @@ impl<DrawInstance: 'static + Drawer> CompletedWidget<DrawInstance>
                     .draw_colored_rect(&border_rect, &self.style.window.border_color);
             }
         }
+
+        // We just consume our entire allocated space
+        window_size
     }
 
     fn get_horizontal_sizing_policy(&self, _drawer: &DrawContext<DrawInstance>) -> SizingPolicy {
@@ -453,10 +457,17 @@ pub struct Text {
 }
 
 impl<DrawInstance: 'static + Drawer> CompletedWidget<DrawInstance> for Text {
-    fn draw(&self, drawer: &mut DrawContext<DrawInstance>, constraints: DrawConstraints) {
-        // TODO: Constrain to width/height
+    fn draw(&self, drawer: &mut DrawContext<DrawInstance>, constraints: DrawConstraints) -> (f32, f32) {
         // TODO: Select font
-        drawer.fonts[0].draw(
+        // Constrain to our parent dimensions if possible.
+        let draw_dimensions = match constraints.dimensions {
+            Some((x, y)) => (Some((x * (drawer.dimensions.0 as f32)) as i32),
+                             Some((y * (drawer.dimensions.1 as f32)) as i32)),
+            None => (None, None)
+        };
+
+        // Draw multi-line text
+        let (used_x, used_y) = drawer.fonts[0].draw_lines(
             &self.contents,
             &self.style.text.color,
             self.style.text.size,
@@ -464,12 +475,17 @@ impl<DrawInstance: 'static + Drawer> CompletedWidget<DrawInstance> for Text {
                 (constraints.origin.0 * (drawer.dimensions.0 as f32)) as _,
                 (constraints.origin.1 * (drawer.dimensions.1 as f32)) as _,
             ),
+            draw_dimensions,
             drawer.drawer,
-        )
+        );
+
+        // Return the actual size used
+        ((used_x as f32) / (drawer.dimensions.0 as f32), (used_y as f32) / (drawer.dimensions.1 as f32))
     }
 
     fn get_vertical_sizing_policy(&self, _drawer: &DrawContext<DrawInstance>) -> SizingPolicy {
-        SizingPolicy::FixedPhysical(self.style.text.size as usize)
+        //SizingPolicy::FixedPhysical(self.style.text.size as usize)
+        SizingPolicy::Expanding
     }
 
     fn get_horizontal_sizing_policy(&self, drawer: &DrawContext<DrawInstance>) -> SizingPolicy {
@@ -549,7 +565,7 @@ struct CompletedDividedBox<DrawInstance: 'static + Drawer> {
 impl<DrawInstance: 'static + Drawer> CompletedWidget<DrawInstance>
     for CompletedDividedBox<DrawInstance>
 {
-    fn draw(&self, drawer: &mut DrawContext<DrawInstance>, constraints: DrawConstraints) {
+    fn draw(&self, drawer: &mut DrawContext<DrawInstance>, constraints: DrawConstraints) -> (f32, f32) {
         let mut x = constraints.origin.0;
         let mut y = constraints.origin.1;
 
@@ -583,7 +599,7 @@ impl<DrawInstance: 'static + Drawer> CompletedWidget<DrawInstance>
                 DividedBoxDirection::Vertical => (remaining_dims.0, add_logical),
             };
 
-            widget.draw(
+            let (widget_x, widget_y) = widget.draw(
                 drawer,
                 DrawConstraints {
                     origin: (x, y),
@@ -591,18 +607,22 @@ impl<DrawInstance: 'static + Drawer> CompletedWidget<DrawInstance>
                 },
             );
 
+            println!("y: {}, remaining: {}", widget_y, remaining_dims.1);
+
             // Update our internal state so we know where to allocate the next widget(s)
             match self.direction {
                 DividedBoxDirection::Horizontal => {
-                    x += add_logical;
-                    remaining_dims.0 -= add_logical;
+                    x += widget_y;
+                    remaining_dims.0 -= widget_y;
                 }
                 DividedBoxDirection::Vertical => {
-                    y += add_logical;
-                    remaining_dims.1 -= add_logical;
+                    y += widget_x;
+                    remaining_dims.1 -= widget_x;
                 }
             }
         }
+
+        (1.0 - remaining_dims.0, 1.0 - remaining_dims.1)
     }
 
     fn get_vertical_sizing_policy(&self, _drawer: &DrawContext<DrawInstance>) -> SizingPolicy {
@@ -689,65 +709,101 @@ struct CompletedAlignment<DrawInstance: 'static + Drawer> {
 impl<DrawInstance: 'static + Drawer> CompletedWidget<DrawInstance>
     for CompletedAlignment<DrawInstance>
 {
-    fn draw(&self, drawer: &mut DrawContext<DrawInstance>, constraints: DrawConstraints) {
+    fn draw(&self, drawer: &mut DrawContext<DrawInstance>, constraints: DrawConstraints) -> (f32, f32) {
         let area_dims = constraints.dimensions.unwrap_or_else(|| (1.0, 1.0));
 
+        let mut used_x = 0f32;
+        let mut used_y = 0f32;
+
         for widget in &self.widgets {
-            match self.direction {
+            // Draw widgets based on the current alignment policy
+            let (widget_width, widget_height) = match self.direction {
                 AlignmentKind::HLeft => widget.draw(drawer, constraints), // Default
                 AlignmentKind::HCenter | AlignmentKind::HRight => {
-                    let logical_width = match widget.get_horizontal_sizing_policy(drawer) {
-                        SizingPolicy::Fixed(x) => x,
-                        SizingPolicy::FixedPhysical(y) => y as f32 / drawer.dimensions.0 as f32,
-                        SizingPolicy::Expanding => {
-                            // We can't help you here
-                            widget.draw(drawer, constraints);
-                            continue;
-                        }
-                    };
+                    let sizing_policy = widget.get_horizontal_sizing_policy(drawer);
 
-                    let offset = if self.direction == AlignmentKind::HCenter {
-                        area_dims.0 / 2f32 - logical_width / 2f32
+                    if let SizingPolicy::Expanding = sizing_policy {
+                        widget.draw(drawer, constraints)
                     } else {
-                        area_dims.0 - logical_width
-                    };
+                        let logical_width = match sizing_policy {
+                            SizingPolicy::Fixed(x) => x,
+                            SizingPolicy::FixedPhysical(y) => y as f32 / drawer.dimensions.0 as f32,
+                            _ => unreachable!()
+                        };
 
-                    widget.draw(
-                        drawer,
-                        DrawConstraints {
-                            origin: (constraints.origin.0 + offset, constraints.origin.1),
-                            dimensions: Some((logical_width, area_dims.1)),
-                        },
-                    );
+                        let offset = if self.direction == AlignmentKind::HCenter {
+                            area_dims.0 / 2f32 - logical_width / 2f32
+                        } else {
+                            area_dims.0 - logical_width
+                        };
+
+                        // Make sure we don't overshoot
+                        let offset = if offset > area_dims.0 {
+                            area_dims.0
+                        } else {
+                            offset
+                        };
+
+                        widget.draw(
+                            drawer,
+                            DrawConstraints {
+                                origin: (constraints.origin.0 + offset, constraints.origin.1),
+                                dimensions: Some((logical_width, area_dims.1)),
+                            },
+                        )
+                    }
                 }
                 AlignmentKind::VTop => widget.draw(drawer, constraints), // Default
                 AlignmentKind::VMiddle | AlignmentKind::VBottom => {
-                    let logical_height = match widget.get_vertical_sizing_policy(drawer) {
-                        SizingPolicy::Fixed(x) => x,
-                        SizingPolicy::FixedPhysical(y) => y as f32 / drawer.dimensions.1 as f32,
-                        SizingPolicy::Expanding => {
-                            // We can't help you here
-                            widget.draw(drawer, constraints);
-                            continue;
-                        }
-                    };
+                    let sizing_policy = widget.get_vertical_sizing_policy(drawer);
 
-                    let offset = if self.direction == AlignmentKind::VMiddle {
-                        area_dims.1 / 2f32 - logical_height / 2f32
+                    if let SizingPolicy::Expanding = sizing_policy {
+                        widget.draw(drawer, constraints)
                     } else {
-                        area_dims.1 - logical_height
-                    };
+                        let logical_height = match widget.get_vertical_sizing_policy(drawer) {
+                            SizingPolicy::Fixed(x) => x,
+                            SizingPolicy::FixedPhysical(y) => y as f32 / drawer.dimensions.1 as f32,
+                            _ => unreachable!()
+                        };
 
-                    widget.draw(
-                        drawer,
-                        DrawConstraints {
-                            origin: (constraints.origin.0, constraints.origin.1 + offset),
-                            dimensions: Some((area_dims.0, logical_height)),
-                        },
-                    );
+                        let offset = if self.direction == AlignmentKind::VMiddle {
+                            area_dims.1 / 2f32 - logical_height / 2f32
+                        } else {
+                            area_dims.1 - logical_height
+                        };
+
+                        // Make sure we don't overshoot
+                        let offset = if offset > area_dims.1 {
+                            area_dims.1
+                        } else {
+                            offset
+                        };
+
+                        widget.draw(
+                            drawer,
+                            DrawConstraints {
+                                origin: (constraints.origin.0, constraints.origin.1 + offset),
+                                dimensions: Some((area_dims.0, logical_height)),
+                            },
+                        )
+                    }
+                }
+            };
+
+            // Add dimensions
+            match self.direction {
+                AlignmentKind::HLeft | AlignmentKind::HCenter | AlignmentKind::HRight => {
+                    used_x = area_dims.0;
+                    used_y += widget_height;
+                }
+                AlignmentKind::VTop | AlignmentKind::VMiddle | AlignmentKind::VBottom => {
+                    used_x += widget_width;
+                    used_y = area_dims.1;
                 }
             }
         }
+
+        (used_x, used_y)
     }
 
     fn get_vertical_sizing_policy(&self, drawer: &DrawContext<DrawInstance>) -> SizingPolicy {
