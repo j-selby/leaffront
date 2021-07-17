@@ -1117,7 +1117,6 @@ name = "leaffront-core"
 version = "0.1.0"
 dependencies = [
  "image",
- "rusttype",
 ]
 
 [[package]]
@@ -1188,19 +1187,11 @@ dependencies = [
  "leaffront-input-pi",
  "leaffront-render-glutin",
  "leaffront-render-pi",
- "leaffront-ui",
  "leaffront-weather",
  "rand",
  "serde",
  "serde_derive",
  "toml",
-]
-
-[[package]]
-name = "leaffront-ui"
-version = "0.1.0"
-dependencies = [
- "leaffront-core",
 ]
 
 [[package]]

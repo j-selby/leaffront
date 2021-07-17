@@ -293,9 +293,6 @@ impl Drawer for GlutinDrawer {
     /// Enables blending of alpha textures. Disabled at end of frame.
     fn enable_blending(&mut self) {
         unsafe {
-            //gl::Enable(gl::BLEND);
-            //gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
-            //gl::Enable(gl::FRAMEBUFFER_SRGB);
             gl::Disable(gl::CULL_FACE);
             gl::Enable(gl::SCISSOR_TEST);
             gl::Enable(gl::BLEND);
