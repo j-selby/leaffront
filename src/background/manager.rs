@@ -46,8 +46,7 @@ impl BackgroundManager {
 
             let mut rng = thread_rng();
 
-            'outer_loop:
-            loop {
+            'outer_loop: loop {
                 match rx.recv().unwrap() {
                     BackgroundMessage::NextBackground => {}
                     BackgroundMessage::Exit => break,
