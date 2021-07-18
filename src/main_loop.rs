@@ -388,7 +388,7 @@ pub fn main_loop(config: LeaffrontConfig) {
                     }
                     *val = (gamma_correction(*val as f32 / 255.0) * 255.0) as u8;
                 }
-                data
+                data.iter()
             }).flatten().collect();
 
             egui_texture = Some(<DrawerImpl as Drawer>::NativeTexture::from_texture(&new_texture));
