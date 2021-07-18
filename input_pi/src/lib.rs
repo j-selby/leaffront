@@ -11,7 +11,7 @@ use evdev::EventType;
 use evdev::InputEventKind;
 
 use leaffront_render_pi::drawer::PiDrawer;
-use std::sync::mpsc::{channel, Receiver, RecvTimeoutError, Sender};
+use std::sync::mpsc::{channel, Receiver, RecvError, RecvTimeoutError, Sender, TryRecvError};
 use std::time::{Duration, Instant};
 use std::{process, thread};
 
@@ -160,18 +160,29 @@ impl Input for PiInput {
             }
 
             loop {
-                let mut duration = wait_for - Instant::now();
+                let now = Instant::now();
+                let duration = if now >= wait_for {
+                    Duration::from_millis(1)
+                } else {
+                    wait_for - now
+                };
 
-                // Don't wait on negative times
-                if duration <= Duration::default() {
-                    duration = Duration::default();
-                }
-
-                let input = match self.receiver.recv_timeout(duration) {
-                    Ok(input) => input,
-                    Err(RecvTimeoutError::Timeout) => break,
-                    Err(RecvTimeoutError::Disconnected) => {
-                        panic!("Failed to read input");
+                // Don't wait on small times
+                let input = if duration <= Duration::from_millis(10) {
+                    match self.receiver.try_recv() {
+                        Ok(input) => input,
+                        Err(TryRecvError::Empty) => break,
+                        Err(TryRecvError::Disconnected) => {
+                            panic!("Failed to read input");
+                        }
+                    }
+                } else {
+                    match self.receiver.recv_timeout(duration) {
+                        Ok(input) => input,
+                        Err(RecvTimeoutError::Timeout) => break,
+                        Err(RecvTimeoutError::Disconnected) => {
+                            panic!("Failed to read input");
+                        }
                     }
                 };
 
