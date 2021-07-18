@@ -1,8 +1,8 @@
 use leaffront_core::backend::Backend;
 use leaffront_core::input::Input;
 use leaffront_core::pos::Rect;
-use leaffront_core::render::Drawer;
 use leaffront_core::render::texture::Texture;
+use leaffront_core::render::Drawer;
 
 use leaffront_weather::manager::WeatherManager;
 
@@ -32,7 +32,9 @@ use std::sync::Arc;
 
 use ctrlc;
 
-use egui::{Pos2, Event, PointerButton, Align2, ClippedMesh, FontDefinitions, Frame, Vec2, Color32};
+use egui::{
+    Align2, ClippedMesh, Color32, Event, FontDefinitions, Frame, PointerButton, Pos2, Vec2,
+};
 
 fn gamma_correction(f: f32) -> f32 {
     if f <= 0.04045 {
@@ -114,7 +116,9 @@ pub fn main_loop(config: LeaffrontConfig) {
 
     let mut default_fonts = FontDefinitions::default();
     {
-        let (_family, size) = default_fonts.family_and_size.get_mut(&egui::TextStyle::Heading)
+        let (_family, size) = default_fonts
+            .family_and_size
+            .get_mut(&egui::TextStyle::Heading)
             .unwrap();
         *size += 20.0;
     }
@@ -144,20 +148,21 @@ pub fn main_loop(config: LeaffrontConfig) {
         let mut raw_input = egui::RawInput::default();
         raw_input.screen_rect = Some(egui::Rect {
             min: Pos2 { x: 0.0, y: 0.0 },
-            max: Pos2 { x: drawer.get_width() as _, y: drawer.get_height() as _ }
+            max: Pos2 {
+                x: drawer.get_width() as _,
+                y: drawer.get_height() as _,
+            },
         });
         raw_input.pixels_per_point = Some(1.0);
         raw_input.time = Some((Instant::now() - start_time).as_secs_f64());
 
         let (mouse_x, mouse_y) = input.get_mouse_pos();
-        raw_input.events.push(
-            Event::PointerButton {
-                pos: Pos2::new(mouse_x as _, mouse_y as _),
-                button: PointerButton::Primary,
-                pressed: input.is_mouse_down(),
-                modifiers: Default::default()
-            }
-        );
+        raw_input.events.push(Event::PointerButton {
+            pos: Pos2::new(mouse_x as _, mouse_y as _),
+            button: PointerButton::Primary,
+            pressed: input.is_mouse_down(),
+            modifiers: Default::default(),
+        });
 
         // Handle incoming notifications
         match backend.get_notification() {
@@ -174,7 +179,7 @@ pub fn main_loop(config: LeaffrontConfig) {
         // Handle the adjustment of state
         let touched = input.is_mouse_down();
 
-        if let Some(next_img) =  bg_mgr.get_next() {
+        if let Some(next_img) = bg_mgr.get_next() {
             drawer.set_background(next_img);
         }
 
@@ -296,7 +301,6 @@ pub fn main_loop(config: LeaffrontConfig) {
                                 ui.heading(msg);
                             }
                         }
-
                     });
             }
             &ScreenState::Night => {
@@ -312,7 +316,6 @@ pub fn main_loop(config: LeaffrontConfig) {
                     .title_bar(false)
                     .frame(Frame::none())
                     .show(&egui_ctx, |ui| {
-
                         // Render out both the top and bottom strings, and center them.
                         let datetime = Local::now();
                         let top_msg = datetime.format("%-I:%M:%S %P").to_string();
@@ -337,8 +340,7 @@ pub fn main_loop(config: LeaffrontConfig) {
                         });
                     });
 
-                if state_countdown.elapsed() > Duration::from_secs(config.night.move_secs)
-                {
+                if state_countdown.elapsed() > Duration::from_secs(config.night.move_secs) {
                     state_countdown = Instant::now();
 
                     // Set new random position
@@ -349,8 +351,8 @@ pub fn main_loop(config: LeaffrontConfig) {
                     let min_y = 200.0;
                     let max_y = screen_height as f32 - 200.0;
 
-                    night_x = rng.gen_range(min_x .. max_x) - screen_width as f32 / 2.0;
-                    night_y = rng.gen_range(min_y .. max_y) - screen_height as f32 / 2.0;
+                    night_x = rng.gen_range(min_x..max_x) - screen_width as f32 / 2.0;
+                    night_y = rng.gen_range(min_y..max_y) - screen_height as f32 / 2.0;
                 }
             }
         }
@@ -380,7 +382,10 @@ pub fn main_loop(config: LeaffrontConfig) {
             egui_version = Some(texture.version);
 
             let mut new_texture = Texture::new(texture.width, texture.height);
-            for (pixels, output) in texture.srgba_pixels().zip(new_texture.tex_data.chunks_exact_mut(4)) {
+            for (pixels, output) in texture
+                .srgba_pixels()
+                .zip(new_texture.tex_data.chunks_exact_mut(4))
+            {
                 let mut data = pixels.to_array();
                 for ((i, val), output) in &mut data.iter_mut().enumerate().zip(output.iter_mut()) {
                     if i < 3 {
@@ -391,10 +396,14 @@ pub fn main_loop(config: LeaffrontConfig) {
                 }
             }
 
-            egui_texture = Some(<DrawerImpl as Drawer>::NativeTexture::from_texture(&new_texture));
+            egui_texture = Some(<DrawerImpl as Drawer>::NativeTexture::from_texture(
+                &new_texture,
+            ));
         }
 
-        let egui_texture = egui_texture.as_ref().expect("Texture should be defined by now!");
+        let egui_texture = egui_texture
+            .as_ref()
+            .expect("Texture should be defined by now!");
 
         for ClippedMesh(clip_rect, mesh) in shapes {
             // Translate the vertexes into points we can use
@@ -416,13 +425,18 @@ pub fn main_loop(config: LeaffrontConfig) {
                 uv.push(vertex.uv.y);
             }
 
-            drawer.start_clip(&Rect::new(clip_rect.min.x as _, clip_rect.min.y as _, (clip_rect.max.x - clip_rect.min.x) as _, (clip_rect.max.y - clip_rect.min.y) as _));
+            drawer.start_clip(&Rect::new(
+                clip_rect.min.x as _,
+                clip_rect.min.y as _,
+                (clip_rect.max.x - clip_rect.min.x) as _,
+                (clip_rect.max.y - clip_rect.min.y) as _,
+            ));
 
             drawer.draw_textured_vertices_colored_uv(
                 egui_texture,
                 positions.as_slice(),
                 colors.as_slice(),
-                uv.as_slice()
+                uv.as_slice(),
             );
 
             drawer.end_clip();

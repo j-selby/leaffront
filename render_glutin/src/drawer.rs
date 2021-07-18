@@ -336,11 +336,7 @@ impl Drawer for GlutinDrawer {
         texture.bind_texture(gl::TEXTURE_2D);
 
         unsafe {
-            gl::DrawArrays(
-                gl::TRIANGLES,
-                0,
-                (vertices.len() / 2) as gl::types::GLsizei,
-            );
+            gl::DrawArrays(gl::TRIANGLES, 0, (vertices.len() / 2) as gl::types::GLsizei);
             gl::BindTexture(gl::TEXTURE_2D, 0);
         }
     }
@@ -389,7 +385,7 @@ impl Drawer for GlutinDrawer {
                 min_x as _,
                 self.get_height() as i32 - max_y as i32,
                 (max_x - min_x) as _,
-                (max_y - min_y) as _
+                (max_y - min_y) as _,
             )
         }
     }

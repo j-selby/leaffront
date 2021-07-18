@@ -6,14 +6,14 @@ extern crate evdev;
 use leaffront_core::input::Input;
 use leaffront_core::version::VersionInfo;
 
+use evdev::AbsoluteAxisType;
 use evdev::EventType;
 use evdev::InputEventKind;
-use evdev::AbsoluteAxisType;
 
 use leaffront_render_pi::drawer::PiDrawer;
+use std::sync::mpsc::{channel, Receiver, RecvTimeoutError, Sender};
 use std::time::{Duration, Instant};
 use std::{process, thread};
-use std::sync::mpsc::{channel, Sender, Receiver, RecvTimeoutError};
 
 /// Implements a basic input mechanism for the Pi through evdev.
 struct PiInputThreaded {
@@ -21,7 +21,7 @@ struct PiInputThreaded {
     mouse_x: usize,
     mouse_y: usize,
     mouse_down: bool,
-    outgoing_channel: Sender<InputUpdate>
+    outgoing_channel: Sender<InputUpdate>,
 }
 
 struct InputUpdate {
@@ -67,7 +67,10 @@ impl PiInputThreaded {
                         println!("Device {:?} failed to send events: {:?}", device_name, e);
                     }
                 },
-                None => println!("Failed to read device name for {:?}", device.physical_path()),
+                None => println!(
+                    "Failed to read device name for {:?}",
+                    device.physical_path()
+                ),
             }
 
             let _ = self.devices.remove(i);
@@ -92,7 +95,7 @@ impl PiInputThreaded {
         if let Err(e) = self.outgoing_channel.send(InputUpdate {
             mouse_x: self.mouse_x,
             mouse_y: self.mouse_y,
-            mouse_down: self.mouse_down
+            mouse_down: self.mouse_down,
         }) {
             println!("Shutting down input thread: {:?}", e);
             false
@@ -107,7 +110,7 @@ impl PiInputThreaded {
             mouse_x: 0,
             mouse_y: 0,
             mouse_down: false,
-            outgoing_channel: sender
+            outgoing_channel: sender,
         };
 
         input.detect_devices();
@@ -127,7 +130,7 @@ impl PiInput {
     pub fn new() -> Self {
         let (sender, receiver) = channel();
 
-        thread::spawn(|x| {
+        thread::spawn(|| {
             let mut input_device = PiInputThreaded::new(sender);
 
             while input_device.update() {}
@@ -137,7 +140,7 @@ impl PiInput {
             receiver,
             mouse_x: 0,
             mouse_y: 0,
-            mouse_down: false
+            mouse_down: false,
         }
     }
 }
@@ -166,9 +169,7 @@ impl Input for PiInput {
 
                 let input = match self.receiver.recv_timeout(duration) {
                     Ok(input) => input,
-                    Err(RecvTimeoutError::Timeout) => {
-                        break
-                    }
+                    Err(RecvTimeoutError::Timeout) => break,
                     Err(RecvTimeoutError::Disconnected) => {
                         panic!("Failed to read input");
                     }

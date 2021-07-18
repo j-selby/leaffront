@@ -21,10 +21,10 @@ use shader::GLSLShader;
 use texture::GlTexture;
 use vbo::GLVBO;
 
+use leaffront_core::pos::Rect;
 use leaffront_core::render::texture::Texture;
 use leaffront_core::render::Drawer;
 use leaffront_core::version::VersionInfo;
-use leaffront_core::pos::Rect;
 
 #[derive(Ord, PartialOrd, Eq, PartialEq)]
 enum DrawState {
@@ -283,11 +283,7 @@ impl Drawer for PiDrawer {
 
         texture.bind_texture(gl::GL_TEXTURE_2D);
 
-        gl::draw_arrays(
-            gl::GL_TRIANGLES,
-            0,
-            (vertices.len() / 2) as gl::GLsizei,
-        );
+        gl::draw_arrays(gl::GL_TRIANGLES, 0, (vertices.len() / 2) as gl::GLsizei);
     }
 
     /// Draws a set of colored vertices to the screen, with a specified color array.
@@ -437,7 +433,7 @@ impl Drawer for PiDrawer {
             min_x as _,
             self.get_height() as i32 - max_y as i32,
             (max_x - min_x) as _,
-            (max_y - min_y) as _
+            (max_y - min_y) as _,
         );
     }
 
