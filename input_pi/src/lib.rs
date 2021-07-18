@@ -119,7 +119,7 @@ impl PiInputThreaded {
     }
 }
 
-struct PiInput {
+pub struct PiInput {
     receiver: Receiver<InputUpdate>,
     mouse_x: usize,
     mouse_y: usize,
