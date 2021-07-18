@@ -13,16 +13,24 @@ use evdev::AbsoluteAxisType;
 use leaffront_render_pi::drawer::PiDrawer;
 use std::time::{Duration, Instant};
 use std::{process, thread};
+use std::sync::mpsc::{channel, Sender, Receiver, RecvTimeoutError};
 
 /// Implements a basic input mechanism for the Pi through evdev.
-pub struct PiInput {
+struct PiInputThreaded {
     devices: Vec<evdev::Device>,
+    mouse_x: usize,
+    mouse_y: usize,
+    mouse_down: bool,
+    outgoing_channel: Sender<InputUpdate>
+}
+
+struct InputUpdate {
     mouse_x: usize,
     mouse_y: usize,
     mouse_down: bool,
 }
 
-impl PiInput {
+impl PiInputThreaded {
     fn detect_devices(&mut self) {
         self.devices.clear();
 
@@ -37,7 +45,7 @@ impl PiInput {
     }
 
     /// Updates input
-    fn update(&mut self) {
+    fn update(&mut self) -> bool {
         let mut input = Vec::new();
 
         // Rust's retain doesn't allow for mutable access, so do this manually
@@ -69,7 +77,6 @@ impl PiInput {
 
         // Many events come from evdev devices - handle them
         for input in input {
-
             if input.event_type() == EventType::ABSOLUTE {
                 touched = true;
                 if input.kind() == InputEventKind::AbsAxis(AbsoluteAxisType::ABS_X) {
@@ -81,14 +88,26 @@ impl PiInput {
         }
 
         self.mouse_down = touched;
+
+        if let Err(e) = self.outgoing_channel.send(InputUpdate {
+            mouse_x: self.mouse_x,
+            mouse_y: self.mouse_y,
+            mouse_down: self.mouse_down
+        }) {
+            println!("Shutting down input thread: {:?}", e);
+            false
+        } else {
+            true
+        }
     }
 
-    pub fn new() -> Self {
-        let mut input = PiInput {
+    fn new(sender: Sender<InputUpdate>) -> Self {
+        let mut input = PiInputThreaded {
             devices: Vec::new(),
             mouse_x: 0,
             mouse_y: 0,
             mouse_down: false,
+            outgoing_channel: sender
         };
 
         input.detect_devices();
@@ -97,9 +116,14 @@ impl PiInput {
     }
 }
 
-impl Input for PiInput {
-    type Window = PiDrawer;
+struct PiInput {
+    receiver: Receiver<InputUpdate>,
+    mouse_x: usize,
+    mouse_y: usize,
+    mouse_down: bool,
+}
 
+impl PiInput {
     fn run<T: FnMut(&Self, &mut Self::Window) -> (bool, Instant) + 'static>(
         mut self,
         mut drawer: Self::Window,
@@ -117,6 +141,65 @@ impl Input for PiInput {
             // Don't wait on negative times
             if duration > Duration::default() {
                 thread::sleep(duration);
+            }
+        }
+
+        process::exit(0)
+    }
+
+    pub fn new() -> Self {
+        let (sender, receiver) = channel();
+
+        thread::spawn(|x| {
+            let mut input_device = PiInputThreaded::new(sender);
+
+            while input_device.update() {}
+        });
+
+        PiInput {
+            receiver,
+            mouse_x: 0,
+            mouse_y: 0,
+            mouse_down: false
+        }
+    }
+}
+
+impl Input for PiInput {
+    type Window = PiDrawer;
+
+    fn run<T: FnMut(&Self, &mut Self::Window) -> (bool, Instant) + 'static>(
+        mut self,
+        mut drawer: Self::Window,
+        mut function: T,
+    ) -> ! {
+        loop {
+            let (do_continue, wait_for) = function(&mut self, &mut drawer);
+            if !do_continue {
+                break;
+            }
+
+            loop {
+                let mut duration = wait_for - Instant::now();
+
+                // Don't wait on negative times
+                if duration <= Duration::default() {
+                    duration = Duration::default();
+                }
+
+                let input = match self.receiver.recv_timeout(duration) {
+                    Ok(input) => input,
+                    Err(RecvTimeoutError::Timeout) => {
+                        break
+                    }
+                    Err(RecvTimeoutError::Disconnected) => {
+                        panic!("Failed to read input");
+                    }
+                };
+
+                self.mouse_down = input.mouse_down;
+                self.mouse_x = input.mouse_x;
+                self.mouse_y = input.mouse_y;
             }
         }
 
