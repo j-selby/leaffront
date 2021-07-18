@@ -6,7 +6,10 @@ extern crate evdev;
 use leaffront_core::input::Input;
 use leaffront_core::version::VersionInfo;
 
-use evdev::{ABSOLUTE, ABS_X, ABS_Y};
+use evdev::EventType::ABSOLUTE;
+use evdev::InputEventKind;
+use evdev::AbsoluteAxisType;
+
 use leaffront_render_pi::drawer::PiDrawer;
 use std::time::{Duration, Instant};
 use std::{process, thread};
@@ -26,7 +29,7 @@ impl PiInput {
         let devices = evdev::enumerate();
 
         for device in devices {
-            if device.events_supported().contains(ABSOLUTE) {
+            if device.supported_events().contains(ABSOLUTE) {
                 println!("Found input device: {:?}", device.name());
                 self.devices.push(device);
             }
@@ -43,8 +46,8 @@ impl PiInput {
             let device = &mut self.devices[i];
 
             // Grab the devices name, then read events from it
-            match device.name().to_str().map(|x| x.to_string()) {
-                Ok(device_name) => match device.events_no_sync() {
+            match device.name().map(|x| x.to_owned()) {
+                Some(device_name) => match device.fetch_events() {
                     Ok(events) => {
                         for evt in events {
                             input.push(evt);
@@ -56,7 +59,7 @@ impl PiInput {
                         println!("Device {:?} failed to send events: {:?}", device_name, e);
                     }
                 },
-                Err(e) => println!("Failed to read device name: {:?}", e),
+                None => println!("Failed to read device name: {:?}", e),
             }
 
             let _ = self.devices.remove(i);
@@ -66,12 +69,13 @@ impl PiInput {
 
         // Many events come from evdev devices - handle them
         for input in input {
-            if input._type == ABSOLUTE.number() {
+
+            if input.event_type() == ABSOLUTE {
                 touched = true;
-                if input.code == ABS_X.number() {
-                    self.mouse_x = input.value as usize;
-                } else if input.code == ABS_Y.number() {
-                    self.mouse_y = input.value as usize;
+                if input.kind() == InputEventKind::AbsAxis(AbsoluteAxisType::ABS_X) {
+                    self.mouse_x = input.value() as usize;
+                } else if input.kind() == InputEventKind::AbsAxis(AbsoluteAxisType::ABS_Y) {
+                    self.mouse_y = input.value() as usize;
                 }
             }
         }
