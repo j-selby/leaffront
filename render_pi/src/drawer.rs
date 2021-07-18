@@ -433,20 +433,16 @@ impl Drawer for PiDrawer {
         let max_x = rect.x + rect.width;
         let max_y = rect.y + rect.height;
 
-        unsafe {
-            gl::scissor(
-                min_x as _,
-                self.get_height() as i32 - max_y as i32,
-                (max_x - min_x) as _,
-                (max_y - min_y) as _
-            )
-        }
+        gl::scissor(
+            min_x as _,
+            self.get_height() as i32 - max_y as i32,
+            (max_x - min_x) as _,
+            (max_y - min_y) as _
+        );
     }
 
     fn end_clip(&self) {
-        unsafe {
-            gl::disable(gl::GL_SCISSOR_TEST);
-        }
+        gl::disable(gl::GL_SCISSOR_TEST);
     }
 }
 
