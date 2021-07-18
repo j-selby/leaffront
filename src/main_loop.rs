@@ -380,16 +380,16 @@ pub fn main_loop(config: LeaffrontConfig) {
             egui_version = Some(texture.version);
 
             let mut new_texture = Texture::new(texture.width, texture.height);
-            new_texture.tex_data = texture.srgba_pixels().map(|x| {
-                let mut data = x.to_array();
-                for (i, val) in &mut data.iter_mut().enumerate() {
-                    if i == 3 {
-                        break;
+            for (pixels, output) in texture.srgba_pixels().zip(new_texture.tex_data.chunks_exact_mut(4)) {
+                let mut data = pixels.to_array();
+                for ((i, val), output) in &mut data.iter_mut().enumerate().zip(output.iter_mut()) {
+                    if i < 3 {
+                        *output = (gamma_correction(*val as f32 / 255.0) * 255.0) as u8
+                    } else {
+                        *output = *val;
                     }
-                    *val = (gamma_correction(*val as f32 / 255.0) * 255.0) as u8;
                 }
-                data.iter()
-            }).flatten().collect();
+            }
 
             egui_texture = Some(<DrawerImpl as Drawer>::NativeTexture::from_texture(&new_texture));
         }
