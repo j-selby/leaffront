@@ -6,7 +6,7 @@ extern crate evdev;
 use leaffront_core::input::Input;
 use leaffront_core::version::VersionInfo;
 
-use evdev::EventType::ABSOLUTE;
+use evdev::EventType;
 use evdev::InputEventKind;
 use evdev::AbsoluteAxisType;
 
@@ -29,7 +29,7 @@ impl PiInput {
         let devices = evdev::enumerate();
 
         for device in devices {
-            if device.supported_events().contains(ABSOLUTE) {
+            if device.supported_events().contains(EventType::ABSOLUTE) {
                 println!("Found input device: {:?}", device.name());
                 self.devices.push(device);
             }
@@ -59,7 +59,7 @@ impl PiInput {
                         println!("Device {:?} failed to send events: {:?}", device_name, e);
                     }
                 },
-                None => println!("Failed to read device name: {:?}", e),
+                None => println!("Failed to read device name for {:?}", device.physical_path()),
             }
 
             let _ = self.devices.remove(i);
@@ -70,7 +70,7 @@ impl PiInput {
         // Many events come from evdev devices - handle them
         for input in input {
 
-            if input.event_type() == ABSOLUTE {
+            if input.event_type() == EventType::ABSOLUTE {
                 touched = true;
                 if input.kind() == InputEventKind::AbsAxis(AbsoluteAxisType::ABS_X) {
                     self.mouse_x = input.value() as usize;

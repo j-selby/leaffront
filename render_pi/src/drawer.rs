@@ -314,7 +314,7 @@ impl Drawer for PiDrawer {
             _ => {}
         }
 
-        let bg_img = image.to_rgb();
+        let bg_img = image.to_rgba8();
 
         // Resize the background to the correct size
         //let size = Context::get_resolution();
