@@ -124,29 +124,6 @@ struct PiInput {
 }
 
 impl PiInput {
-    fn run<T: FnMut(&Self, &mut Self::Window) -> (bool, Instant) + 'static>(
-        mut self,
-        mut drawer: Self::Window,
-        mut function: T,
-    ) -> ! {
-        loop {
-            self.update();
-
-            let (do_continue, wait_for) = function(&mut self, &mut drawer);
-            if !do_continue {
-                break;
-            }
-
-            let duration = wait_for - Instant::now();
-            // Don't wait on negative times
-            if duration > Duration::default() {
-                thread::sleep(duration);
-            }
-        }
-
-        process::exit(0)
-    }
-
     pub fn new() -> Self {
         let (sender, receiver) = channel();
 
