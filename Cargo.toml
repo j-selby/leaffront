@@ -1,6 +1,6 @@
 [package]
 name = "leaffront-station"
-version = "0.2.0"
+version = "0.3.0"
 license = "MIT"
 authors = ["James <jselby@jselby.net>"]
 description = "A weather and notification frontend for Leaffront, designed for embedded systems."
