@@ -128,7 +128,8 @@ pub fn main_loop(config: LeaffrontConfig) {
     let mut style = egui_ctx.style().as_ref().to_owned();
     style.spacing.window_padding = Vec2::new(15.0, 15.0);
     style.visuals.dark_mode = true;
-    style.visuals.widgets.noninteractive.bg_fill = Color32::from_rgb(20, 20, 20);
+    style.visuals.widgets.noninteractive.bg_fill = Color32::from_rgba_unmultiplied(20, 20, 20, 220);
+    style.visuals.widgets.noninteractive.bg_stroke.color = Color32::from_rgba_unmultiplied(20, 20, 20, 220);
     style.visuals.widgets.noninteractive.fg_stroke.color = Color32::WHITE;
     egui_ctx.set_style(style);
 

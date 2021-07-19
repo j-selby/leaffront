@@ -159,6 +159,8 @@ impl Input for PiInput {
                 break;
             }
 
+            self.mouse_down = false;
+
             loop {
                 let now = Instant::now();
                 let duration = if now >= wait_for {
