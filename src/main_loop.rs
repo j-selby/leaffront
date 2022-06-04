@@ -34,21 +34,19 @@ use std::sync::Arc;
 
 use ctrlc;
 
-use egui::{
-    Align2, Color32, Event, Frame, PointerButton, Pos2,
-};
+use egui::epaint::Primitive;
+use egui::style::Margin;
 use egui::ClippedPrimitive;
 use egui::TextureId;
 use egui::TexturesDelta;
-use egui::epaint::Primitive;
-use egui::style::Margin;
+use egui::{Align2, Color32, Event, Frame, PointerButton, Pos2};
 
 /// A texture bundle contains both a raw, CPU-managed texture, as well
 /// as a GPU texture. This allows for updates to the CPU-managed texture
 /// easily.
 struct TextureBundle {
     sample: Texture,
-    native: <DrawerImpl as Drawer>::NativeTexture
+    native: <DrawerImpl as Drawer>::NativeTexture,
 }
 
 pub fn main_loop(config: LeaffrontConfig) {
@@ -125,9 +123,12 @@ pub fn main_loop(config: LeaffrontConfig) {
     style.spacing.window_margin = Margin::symmetric(15.0, 15.0);
     style.visuals.dark_mode = true;
     style.visuals.widgets.noninteractive.bg_fill = Color32::from_rgba_unmultiplied(20, 20, 20, 220);
-    style.visuals.widgets.noninteractive.bg_stroke.color = Color32::from_rgba_unmultiplied(20, 20, 20, 220);
+    style.visuals.widgets.noninteractive.bg_stroke.color =
+        Color32::from_rgba_unmultiplied(20, 20, 20, 220);
     style.visuals.widgets.noninteractive.fg_stroke.color = Color32::WHITE;
-    style.text_styles.get_mut(&egui::TextStyle::Heading)
+    style
+        .text_styles
+        .get_mut(&egui::TextStyle::Heading)
         .expect("Heading text style should exist")
         .size += 20.0;
     egui_ctx.set_style(style);
@@ -142,7 +143,7 @@ pub fn main_loop(config: LeaffrontConfig) {
 
     let mut last_second = Local::now();
 
-    let mut pointer_event : Option<Event> = None;
+    let mut pointer_event: Option<Event> = None;
 
     println!("Initialised successfully");
 
@@ -392,7 +393,7 @@ pub fn main_loop(config: LeaffrontConfig) {
 
         if output.needs_repaint {
             drawer.start();
-    
+
             match &state {
                 &ScreenState::Day(..) => {
                     drawer.clear(true);
@@ -401,7 +402,7 @@ pub fn main_loop(config: LeaffrontConfig) {
                     drawer.clear(false);
                 }
             }
-    
+
             drawer.enable_blending();
 
             // Upload all textures as required
@@ -409,7 +410,7 @@ pub fn main_loop(config: LeaffrontConfig) {
                 // Either create a new texture or fetch the old CPU (non-GPU) texture.
                 let mut base_texture = match egui_textures.remove(new_tex_id) {
                     Some(texture_bundle) => texture_bundle.sample,
-                    None => Texture::new(image_delta.image.width(), image_delta.image.height())
+                    None => Texture::new(image_delta.image.width(), image_delta.image.height()),
                 };
 
                 let [base_x, base_y] = image_delta.pos.unwrap_or([0, 0]);
@@ -419,24 +420,36 @@ pub fn main_loop(config: LeaffrontConfig) {
                         for (i, pixel) in color_image.pixels.iter().enumerate() {
                             let y = base_y + (i / color_image.width());
                             let x = base_x + (i % color_image.width());
-                            base_texture.draw_pixel(&Color::new_4byte(pixel.r(), pixel.g(), pixel.b(), pixel.a()), x, y);
+                            base_texture.draw_pixel(
+                                &Color::new_4byte(pixel.r(), pixel.g(), pixel.b(), pixel.a()),
+                                x,
+                                y,
+                            );
                         }
-                    },
+                    }
                     egui::ImageData::Font(font_image) => {
-                        for (i, pixel) in font_image.srgba_pixels(1.0)
-                            .enumerate() {
-                                let y = base_y + (i / font_image.width());
-                                let x = base_x + (i % font_image.width());
-                                base_texture.draw_pixel(&Color::new_4byte(pixel.r(), pixel.g(), pixel.b(), pixel.a()), x, y);
+                        for (i, pixel) in font_image.srgba_pixels(1.0).enumerate() {
+                            let y = base_y + (i / font_image.width());
+                            let x = base_x + (i % font_image.width());
+                            base_texture.draw_pixel(
+                                &Color::new_4byte(pixel.r(), pixel.g(), pixel.b(), pixel.a()),
+                                x,
+                                y,
+                            );
                         }
-                    },
+                    }
                 }
 
-                let native_texture = <DrawerImpl as Drawer>::NativeTexture::from_texture(
-                    &base_texture,
-                );    
+                let native_texture =
+                    <DrawerImpl as Drawer>::NativeTexture::from_texture(&base_texture);
 
-                egui_textures.insert(*new_tex_id, TextureBundle { sample: base_texture, native: native_texture });
+                egui_textures.insert(
+                    *new_tex_id,
+                    TextureBundle {
+                        sample: base_texture,
+                        native: native_texture,
+                    },
+                );
             }
 
             for free_texture in &textures_delta.free {
@@ -447,53 +460,56 @@ pub fn main_loop(config: LeaffrontConfig) {
 
             // Generate primitives we need to render
 
-        let shapes = egui_ctx.tessellate(output.shapes);
+            let shapes = egui_ctx.tessellate(output.shapes);
 
-        for ClippedPrimitive { clip_rect, primitive } in shapes {
-            // Translate the vertexes into points we can use
-            let mut positions = Vec::with_capacity(16);
-            let mut colors = Vec::with_capacity(24);
-            let mut uv = Vec::with_capacity(16);
+            for ClippedPrimitive {
+                clip_rect,
+                primitive,
+            } in shapes
+            {
+                // Translate the vertexes into points we can use
+                let mut positions = Vec::with_capacity(16);
+                let mut colors = Vec::with_capacity(24);
+                let mut uv = Vec::with_capacity(16);
 
-            let mesh = match primitive {
-                Primitive::Mesh(mesh) => mesh,
-                _ => continue
-            };
+                let mesh = match primitive {
+                    Primitive::Mesh(mesh) => mesh,
+                    _ => continue,
+                };
 
-            for index in mesh.indices {
-                let vertex = &mesh.vertices[index as usize];
-                positions.push(vertex.pos.x / drawer.get_width() as f32 * 2.0 - 1.0);
-                positions.push((vertex.pos.y / drawer.get_height() as f32 * 2.0 - 1.0) * -1.0);
+                for index in mesh.indices {
+                    let vertex = &mesh.vertices[index as usize];
+                    positions.push(vertex.pos.x / drawer.get_width() as f32 * 2.0 - 1.0);
+                    positions.push((vertex.pos.y / drawer.get_height() as f32 * 2.0 - 1.0) * -1.0);
 
-                colors.push((vertex.color.r() as f32) / 255.0);
-                colors.push((vertex.color.g() as f32) / 255.0);
-                colors.push((vertex.color.b() as f32) / 255.0);
-                colors.push((vertex.color.a() as f32) / 255.0);
+                    colors.push((vertex.color.r() as f32) / 255.0);
+                    colors.push((vertex.color.g() as f32) / 255.0);
+                    colors.push((vertex.color.b() as f32) / 255.0);
+                    colors.push((vertex.color.a() as f32) / 255.0);
 
-                uv.push(vertex.uv.x);
-                uv.push(vertex.uv.y);
+                    uv.push(vertex.uv.x);
+                    uv.push(vertex.uv.y);
+                }
+
+                drawer.start_clip(&Rect::new(
+                    clip_rect.min.x as _,
+                    clip_rect.min.y as _,
+                    (clip_rect.max.x - clip_rect.min.x) as _,
+                    (clip_rect.max.y - clip_rect.min.y) as _,
+                ));
+
+                drawer.draw_textured_vertices_colored_uv(
+                    &egui_textures[&mesh.texture_id].native,
+                    positions.as_slice(),
+                    colors.as_slice(),
+                    uv.as_slice(),
+                );
+
+                drawer.end_clip();
             }
 
-            drawer.start_clip(&Rect::new(
-                clip_rect.min.x as _,
-                clip_rect.min.y as _,
-                (clip_rect.max.x - clip_rect.min.x) as _,
-                (clip_rect.max.y - clip_rect.min.y) as _,
-            ));
-
-            drawer.draw_textured_vertices_colored_uv(
-                &egui_textures[&mesh.texture_id].native,
-                positions.as_slice(),
-                colors.as_slice(),
-                uv.as_slice(),
-            );
-
-            drawer.end_clip();
+            drawer.end();
         }
-
-        drawer.end();
-
-    }
 
         (
             true,

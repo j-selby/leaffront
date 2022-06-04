@@ -13,7 +13,7 @@ pub struct LeaffrontConfig {
     pub day: Day,
     pub night: Night,
     pub weather: Weather,
-    pub fullscreen: bool
+    pub fullscreen: bool,
 }
 
 #[derive(Deserialize, Debug)]

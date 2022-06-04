@@ -1,6 +1,10 @@
 //! Generic brightness controls.
 
-use std::{path::Path, fs::File, io::{Write, self}};
+use std::{
+    fs::File,
+    io::{self, Write},
+    path::Path,
+};
 
 pub fn set_brightness(brightness: u8) -> Result<(), io::Error> {
     let path = Path::new("/sys/class/backlight/rpi_backlight/brightness");

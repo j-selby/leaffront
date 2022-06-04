@@ -15,8 +15,8 @@ use leaffront_core::version::VersionInfo;
 
 use glutin;
 use glutin::dpi::LogicalSize;
-use glutin::{ContextWrapper, PossiblyCurrent};
 use glutin::window::Fullscreen;
+use glutin::{ContextWrapper, PossiblyCurrent};
 
 use gl;
 
@@ -371,7 +371,11 @@ impl Drawer for GlutinDrawer {
     }
 
     fn set_fullscreen(&mut self, fullscreen: bool) {
-        self.gl_window.window().set_fullscreen(if fullscreen { Some(Fullscreen::Borderless(None)) } else { None })
+        self.gl_window.window().set_fullscreen(if fullscreen {
+            Some(Fullscreen::Borderless(None))
+        } else {
+            None
+        })
     }
 
     fn get_transition_count(&self) -> usize {
