@@ -90,7 +90,7 @@ struct ResponseWeatherSystem {
 }
 
 /// JSON output from OpenWeatherMap
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 struct OpenWeatherMapResponse {
     #[serde(default)]
     coord: Option<ResponseCoords>,

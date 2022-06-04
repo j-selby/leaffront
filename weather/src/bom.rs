@@ -105,6 +105,8 @@ struct ResponseObservations {
     data: ResponseObservationsPayload,
 }
 
+static MIN_GEOCODE_LENGTH: usize = 4;
+
 pub struct BOM;
 
 impl BOM {}
@@ -127,25 +129,22 @@ where
     {
         Ok(v) => Ok(v),
         Err(e) => {
-            if geohash.len() < 7 {
+            if geohash.len() <= MIN_GEOCODE_LENGTH {
                 return Err(e);
             }
 
             println!(
-                "BOM API: Failed to parse forecasts with 7-code geohash ({:?}), retrying with 6...",
-                e
+                "BOM API: Failed to parse forecasts with {}-code geohash ({:?}), retrying with {}...",
+                geohash.len(),
+                e,
+                geohash.len() - 1
             );
 
-            let short_geocode = &geohash[0..6];
+            let short_geocode = &geohash[0..geohash.len() - 1];
 
-            assert_eq!(short_geocode.len(), 6);
+            assert!(short_geocode.len() >= MIN_GEOCODE_LENGTH);
 
-            client
-                .get(&endpoint(short_geocode))
-                .send()
-                .map_err(|x| format!("Error sending request: {:?}", x))?
-                .json()
-                .map_err(|x| format!("Error parsing request: {:?}", x))
+            return try_with_different_length_geocodes(client, endpoint, short_geocode);
         }
     }
 }

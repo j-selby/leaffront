@@ -49,3 +49,5 @@ target/
 
 config.toml
 art/
+
+.vscode/
