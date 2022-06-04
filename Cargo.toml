@@ -1,6 +1,6 @@
 [package]
 name = "leaffront-station"
-version = "0.3.0"
+version = "0.4.0"
 license = "MIT"
 authors = ["James <jselby@jselby.net>"]
 description = "A weather and notification frontend for Leaffront, designed for embedded systems."
@@ -11,17 +11,17 @@ edition = "2018"
 [dependencies]
 serde = "1.0"
 serde_derive = "1.0"
-toml = "0.5.8"
-clap = "2.33.3"
+toml = "0.5.9"
+clap = "3.1.18"
 
 chrono = "0.4.19"
 
-ctrlc = "3.1.9"
+ctrlc = "3.2.2"
 
-image = "0.23.14"
-rand = "0.8.4"
+image = "0.24.2"
+rand = "0.8.5"
 
-egui = "0.13.1"
+egui = "0.18.1"
 
 leaffront-core = { path = "core" }
 leaffront-weather = { path = "weather" }

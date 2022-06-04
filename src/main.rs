@@ -39,7 +39,7 @@ mod main_loop;
 
 mod platform;
 
-use clap::{App, Arg};
+use clap::{Arg, Command};
 
 use leaffront_core::version::VersionInfo;
 
@@ -48,7 +48,7 @@ use platform::*;
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 fn main() {
-    let matches = App::new("Leaffront")
+    let matches = Command::new("Leaffront")
         .version(VERSION)
         .author("Selby (https://github.com/j-selby)")
         .about("A simple photoframe for the Raspberry Pi")
@@ -59,8 +59,8 @@ fn main() {
              applications can be run alongside to enhance the experience.",
         )
         .arg(
-            Arg::with_name("config")
-                .short("c")
+            Arg::new("config")
+                .short('c')
                 .long("config")
                 .help("Provide a custom configuration file")
                 .default_value("config.toml")
@@ -69,8 +69,8 @@ fn main() {
                 .takes_value(true),
         )
         .arg(
-            Arg::with_name("version")
-                .short("v")
+            Arg::new("version")
+                .short('v')
                 .long("version")
                 .help("Shows version information and exits.")
                 .required(false),

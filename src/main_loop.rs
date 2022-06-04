@@ -1,6 +1,7 @@
 use leaffront_core::backend::Backend;
 use leaffront_core::input::Input;
 use leaffront_core::pos::Rect;
+use leaffront_core::render::color::Color;
 use leaffront_core::render::texture::Texture;
 use leaffront_core::render::Drawer;
 
@@ -24,6 +25,7 @@ use chrono::Local;
 use rand::thread_rng;
 use rand::Rng;
 
+use std::collections::HashMap;
 use std::time::Duration;
 use std::time::Instant;
 
@@ -33,15 +35,20 @@ use std::sync::Arc;
 use ctrlc;
 
 use egui::{
-    Align2, ClippedMesh, Color32, Event, FontDefinitions, Frame, PointerButton, Pos2, Vec2,
+    Align2, Color32, Event, Frame, PointerButton, Pos2,
 };
+use egui::ClippedPrimitive;
+use egui::TextureId;
+use egui::TexturesDelta;
+use egui::epaint::Primitive;
+use egui::style::Margin;
 
-fn gamma_correction(f: f32) -> f32 {
-    if f <= 0.04045 {
-        f / 12.92
-    } else {
-        ((f + 0.055) / 1.055).powf(2.4)
-    }
+/// A texture bundle contains both a raw, CPU-managed texture, as well
+/// as a GPU texture. This allows for updates to the CPU-managed texture
+/// easily.
+struct TextureBundle {
+    sample: Texture,
+    native: <DrawerImpl as Drawer>::NativeTexture
 }
 
 pub fn main_loop(config: LeaffrontConfig) {
@@ -112,33 +119,30 @@ pub fn main_loop(config: LeaffrontConfig) {
     })
     .expect("Error setting Ctrl-C handler");
 
-    let mut egui_ctx = egui::CtxRef::default();
-
-    let mut default_fonts = FontDefinitions::default();
-    {
-        let (_family, size) = default_fonts
-            .family_and_size
-            .get_mut(&egui::TextStyle::Heading)
-            .unwrap();
-        *size += 20.0;
-    }
-
-    egui_ctx.set_fonts(default_fonts);
+    let egui_ctx = egui::Context::default();
 
     let mut style = egui_ctx.style().as_ref().to_owned();
-    style.spacing.window_padding = Vec2::new(15.0, 15.0);
+    style.spacing.window_margin = Margin::symmetric(15.0, 15.0);
     style.visuals.dark_mode = true;
     style.visuals.widgets.noninteractive.bg_fill = Color32::from_rgba_unmultiplied(20, 20, 20, 220);
     style.visuals.widgets.noninteractive.bg_stroke.color = Color32::from_rgba_unmultiplied(20, 20, 20, 220);
     style.visuals.widgets.noninteractive.fg_stroke.color = Color32::WHITE;
+    style.text_styles.get_mut(&egui::TextStyle::Heading)
+        .expect("Heading text style should exist")
+        .size += 20.0;
     egui_ctx.set_style(style);
 
     let start_time = Instant::now();
 
-    let mut egui_version: Option<u64> = None;
-    let mut egui_texture: Option<<DrawerImpl as Drawer>::NativeTexture> = None;
+    let mut egui_textures: HashMap<TextureId, TextureBundle> = HashMap::new();
 
     drawer.set_fullscreen(config.fullscreen);
+
+    let mut textures_delta = TexturesDelta::default();
+
+    let mut last_second = Local::now();
+
+    let mut pointer_event : Option<Event> = None;
 
     println!("Initialised successfully");
 
@@ -160,12 +164,27 @@ pub fn main_loop(config: LeaffrontConfig) {
         raw_input.time = Some((Instant::now() - start_time).as_secs_f64());
 
         let (mouse_x, mouse_y) = input.get_mouse_pos();
-        raw_input.events.push(Event::PointerButton {
+
+        // Only send a mouse event if something has actually changed
+        let new_pointer_event = Event::PointerButton {
             pos: Pos2::new(mouse_x as _, mouse_y as _),
             button: PointerButton::Primary,
             pressed: input.is_mouse_down(),
             modifiers: Default::default(),
-        });
+        };
+
+        if pointer_event.as_ref() != Some(&new_pointer_event) {
+            raw_input.events.push(new_pointer_event.clone());
+        }
+
+        pointer_event = Some(new_pointer_event);
+
+        // Redraw every second
+        let mut dirty_state = false;
+        if Local::now().timestamp() > last_second.timestamp() {
+            dirty_state = true;
+            last_second = Local::now();
+        }
 
         // Handle incoming notifications
         match backend.get_notification() {
@@ -184,6 +203,7 @@ pub fn main_loop(config: LeaffrontConfig) {
 
         if let Some(next_img) = bg_mgr.get_next() {
             drawer.set_background(next_img);
+            dirty_state = true;
         }
 
         let next_state = match &state {
@@ -233,22 +253,15 @@ pub fn main_loop(config: LeaffrontConfig) {
                     Err(v) => println!("Failed to set brightness: {:?}", v),
                     _ => {}
                 }
+                dirty_state = true;
             }
             None => {}
         }
 
-        drawer.start();
-
-        match &state {
-            &ScreenState::Day(..) => {
-                drawer.clear(true);
-            }
-            &ScreenState::Night => {
-                drawer.clear(false);
-            }
+        // Make sure egui recognises external updates
+        if dirty_state {
+            egui_ctx.request_repaint();
         }
-
-        drawer.enable_blending();
 
         egui_ctx.begin_frame(raw_input);
 
@@ -262,7 +275,6 @@ pub fn main_loop(config: LeaffrontConfig) {
                 egui::Window::new("Day Display")
                     .enabled(true)
                     .resizable(false)
-                    .scroll(false)
                     .anchor(Align2::LEFT_BOTTOM, (10.0, -10.0))
                     .auto_sized()
                     .min_width(100.0)
@@ -310,7 +322,6 @@ pub fn main_loop(config: LeaffrontConfig) {
                 egui::Window::new("Night Display")
                     .enabled(true)
                     .resizable(false)
-                    .scroll(false)
                     .anchor(Align2::CENTER_CENTER, (night_x, night_y))
                     .auto_sized()
                     .min_width(100.0)
@@ -365,7 +376,6 @@ pub fn main_loop(config: LeaffrontConfig) {
             egui::Window::new(format!("Night Display {}", i))
                 .enabled(true)
                 .resizable(false)
-                .scroll(false)
                 .anchor(Align2::RIGHT_TOP, (-10.0, 50.0 + (i as f32 * 120.0)))
                 .auto_sized()
                 .collapsible(false)
@@ -376,43 +386,79 @@ pub fn main_loop(config: LeaffrontConfig) {
                 });
         }
 
-        let (_output, bounding) = egui_ctx.end_frame();
+        let output = egui_ctx.end_frame();
 
-        let texture = egui_ctx.texture();
-        let shapes = egui_ctx.tessellate(bounding);
+        textures_delta.append(output.textures_delta);
 
-        if egui_version != Some(texture.version) {
-            egui_version = Some(texture.version);
-
-            let mut new_texture = Texture::new(texture.width, texture.height);
-            for (pixels, output) in texture
-                .srgba_pixels()
-                .zip(new_texture.tex_data.chunks_exact_mut(4))
-            {
-                let mut data = pixels.to_array();
-                for ((i, val), output) in &mut data.iter_mut().enumerate().zip(output.iter_mut()) {
-                    if i < 3 {
-                        *output = (gamma_correction(*val as f32 / 255.0) * 255.0) as u8
-                    } else {
-                        *output = *val;
-                    }
+        if output.needs_repaint {
+            drawer.start();
+    
+            match &state {
+                &ScreenState::Day(..) => {
+                    drawer.clear(true);
+                }
+                &ScreenState::Night => {
+                    drawer.clear(false);
                 }
             }
+    
+            drawer.enable_blending();
 
-            egui_texture = Some(<DrawerImpl as Drawer>::NativeTexture::from_texture(
-                &new_texture,
-            ));
-        }
+            // Upload all textures as required
+            for (new_tex_id, image_delta) in &textures_delta.set {
+                // Either create a new texture or fetch the old CPU (non-GPU) texture.
+                let mut base_texture = match egui_textures.remove(new_tex_id) {
+                    Some(texture_bundle) => texture_bundle.sample,
+                    None => Texture::new(image_delta.image.width(), image_delta.image.height())
+                };
 
-        let egui_texture = egui_texture
-            .as_ref()
-            .expect("Texture should be defined by now!");
+                let [base_x, base_y] = image_delta.pos.unwrap_or([0, 0]);
 
-        for ClippedMesh(clip_rect, mesh) in shapes {
+                match &image_delta.image {
+                    egui::ImageData::Color(color_image) => {
+                        for (i, pixel) in color_image.pixels.iter().enumerate() {
+                            let y = base_y + (i / color_image.width());
+                            let x = base_x + (i % color_image.width());
+                            base_texture.draw_pixel(&Color::new_4byte(pixel.r(), pixel.g(), pixel.b(), pixel.a()), x, y);
+                        }
+                    },
+                    egui::ImageData::Font(font_image) => {
+                        for (i, pixel) in font_image.srgba_pixels(1.0)
+                            .enumerate() {
+                                let y = base_y + (i / font_image.width());
+                                let x = base_x + (i % font_image.width());
+                                base_texture.draw_pixel(&Color::new_4byte(pixel.r(), pixel.g(), pixel.b(), pixel.a()), x, y);
+                        }
+                    },
+                }
+
+                let native_texture = <DrawerImpl as Drawer>::NativeTexture::from_texture(
+                    &base_texture,
+                );    
+
+                egui_textures.insert(*new_tex_id, TextureBundle { sample: base_texture, native: native_texture });
+            }
+
+            for free_texture in &textures_delta.free {
+                egui_textures.remove(free_texture);
+            }
+
+            textures_delta.clear();
+
+            // Generate primitives we need to render
+
+        let shapes = egui_ctx.tessellate(output.shapes);
+
+        for ClippedPrimitive { clip_rect, primitive } in shapes {
             // Translate the vertexes into points we can use
             let mut positions = Vec::with_capacity(16);
             let mut colors = Vec::with_capacity(24);
             let mut uv = Vec::with_capacity(16);
+
+            let mesh = match primitive {
+                Primitive::Mesh(mesh) => mesh,
+                _ => continue
+            };
 
             for index in mesh.indices {
                 let vertex = &mesh.vertices[index as usize];
@@ -436,7 +482,7 @@ pub fn main_loop(config: LeaffrontConfig) {
             ));
 
             drawer.draw_textured_vertices_colored_uv(
-                egui_texture,
+                &egui_textures[&mesh.texture_id].native,
                 positions.as_slice(),
                 colors.as_slice(),
                 uv.as_slice(),
@@ -446,6 +492,8 @@ pub fn main_loop(config: LeaffrontConfig) {
         }
 
         drawer.end();
+
+    }
 
         (
             true,
