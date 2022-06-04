@@ -1,4 +1,5 @@
 //! Fetches weather from OpenWeatherMap
+#![allow(dead_code)]
 
 use Weather;
 use WeatherProvider;

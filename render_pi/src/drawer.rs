@@ -416,7 +416,11 @@ impl Drawer for PiDrawer {
 
     /// Sets the brightness of the screen.
     fn set_brightness(&mut self, val: u8) -> ::std::io::Result<()> {
-        set_brightness(val)
+        leaffront_core::brightness::set_brightness(val)
+    }
+
+    fn set_fullscreen(&mut self, _fullscreen: bool) {
+        // NOOP
     }
 
     fn get_transition_count(&self) -> usize {

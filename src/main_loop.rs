@@ -138,6 +138,8 @@ pub fn main_loop(config: LeaffrontConfig) {
     let mut egui_version: Option<u64> = None;
     let mut egui_texture: Option<<DrawerImpl as Drawer>::NativeTexture> = None;
 
+    drawer.set_fullscreen(config.fullscreen);
+
     println!("Initialised successfully");
 
     input.run(drawer, move |input, drawer| {

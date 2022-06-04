@@ -1,5 +1,6 @@
 art_dir = "art"
 refresh_rate = 500
+fullscreen = true
 
 [sleep]
 sleep_hour = 22
