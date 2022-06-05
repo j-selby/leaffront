@@ -142,6 +142,7 @@ pub fn main_loop(config: LeaffrontConfig) {
     let mut textures_delta = TexturesDelta::default();
 
     let mut last_second = Local::now();
+    let mut last_set_brightness = None;
 
     let mut pointer_event: Option<Event> = None;
 
@@ -246,15 +247,21 @@ pub fn main_loop(config: LeaffrontConfig) {
         match next_state {
             Some(next) => {
                 state = next;
+                dirty_state = true;
+
+                // Configure brightness (if required)
                 let brightness = match state {
                     ScreenState::Day(_) => config.day.brightness,
                     ScreenState::Night => config.night.brightness,
                 };
-                match drawer.set_brightness(brightness) {
-                    Err(v) => println!("Failed to set brightness: {:?}", v),
-                    _ => {}
+                if last_set_brightness != Some(brightness) {
+                    match drawer.set_brightness(brightness) {
+                        Err(v) => println!("Failed to set brightness: {:?}", v),
+                        _ => {}
+                    }
+
+                    last_set_brightness = Some(brightness);
                 }
-                dirty_state = true;
             }
             None => {}
         }
