@@ -22,8 +22,12 @@ pub fn set_brightness(brightness: u8) -> Result<(), io::Error> {
                 debug!("Found screen controller classed object: {:?}", child_path);
                 child_path.push("brightness");
 
-                if child_path.exists() {
-                    let mut file = File::create(path)?;
+                // Get the absolute path
+                let brightness_path = fs::canonicalize(child_path)?;
+                debug!("Choosing brightness object: {:?}", brightness_path);
+
+                if brightness_path.exists() {
+                    let mut file = File::create(brightness_path)?;
 
                     file.write(format!("{}", brightness).as_bytes())?;
 
