@@ -375,7 +375,8 @@ impl Drawer for GlutinDrawer {
             Some(Fullscreen::Borderless(None))
         } else {
             None
-        })
+        });
+        self.gl_window.window().set_cursor_visible(!fullscreen)
     }
 
     fn get_transition_count(&self) -> usize {
