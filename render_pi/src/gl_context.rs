@@ -59,7 +59,7 @@ impl Context {
             };
         let dimensions = dimensions?;
 
-        println!("Display size: {}x{}", dimensions.width, dimensions.height);
+        debug!("Display size: {}x{}", dimensions.width, dimensions.height);
 
         // setup the destination rectangle where opengl will be drawing
         let mut dest_rect = Rect {
@@ -232,7 +232,7 @@ impl Context {
 
 impl Drop for Context {
     fn drop(&mut self) {
-        println!("Context shutdown!");
+        debug!("Context shutdown!");
         egl::destroy_surface(self.display, self.surface);
         egl::destroy_context(self.display, self.context);
         egl::terminate(self.display);
@@ -243,9 +243,9 @@ impl Drop for Context {
         // "Update" cannot be deleted?
 
         if !dispmanx::display_close(self.dispman_display) {
-            println!("Display shutdown successful.");
+            info!("Display shutdown successful.");
         } else {
-            println!("Display shutdown failed.");
+            warn!("Display shutdown failed.");
         }
 
         bcm_host::deinit();

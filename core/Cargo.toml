@@ -5,3 +5,4 @@ authors = ["James <jselby@jselby.net>"]
 
 [dependencies]
 image = "0.24.2"
+log = "0.4.0"

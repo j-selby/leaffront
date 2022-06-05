@@ -110,10 +110,7 @@ impl WeatherManager {
 
                         match &weather {
                             &Err(ref x) => {
-                                println!(
-                                    "Weather update failed ({:?}); retrying in 10 seconds...",
-                                    x
-                                );
+                                warn!("Weather update failed ({:?}); retrying in 10 seconds...", x);
                             }
                             _ => {}
                         }
@@ -128,9 +125,8 @@ impl WeatherManager {
                         }
                     }
                     Err(e) => {
-                        println!(
-                            "Weather thread timed out ({:?}); \
-                        reinitialising and retrying in 10 seconds...",
+                        warn!(
+                            "Weather thread timed out ({:?}); reinitialising and retrying in 10 seconds...",
                             e
                         );
                         thread::sleep(Duration::from_millis(10 * 1000));

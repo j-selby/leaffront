@@ -376,14 +376,12 @@ impl Drawer for PiDrawer {
             bg_ptr,
             &dest_rect,
         ) {
-            println!("Failed to write data")
+            warn!("Failed to write data")
         }
 
         let update = dispmanx::update_start(10);
 
         // Resize the element's src attr
-        //println!("Img dims: {} {}", target_width, target_height);
-
         let src_rect = VCRect {
             x: 0,
             y: 0,
@@ -404,11 +402,11 @@ impl Drawer for PiDrawer {
         );
 
         if dispmanx::element_change_source(update, element, bg_resource) {
-            println!("Resource change failed!");
+            warn!("Resource change failed!");
         }
 
         if dispmanx::update_submit_sync(update) {
-            println!("Failed to update");
+            warn!("Failed to update");
         }
 
         self.bg = Some(bg_resource);
@@ -454,7 +452,7 @@ impl VersionInfo for PiDrawer {
 
 impl Drop for PiDrawer {
     fn drop(&mut self) {
-        print!("Cleaning up background: ");
+        debug!("Cleaning up background: ");
 
         match self.bg {
             Some(resource) => {
@@ -463,6 +461,6 @@ impl Drop for PiDrawer {
             _ => {}
         }
 
-        println!("Done!");
+        debug!("Done!");
     }
 }

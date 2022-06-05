@@ -165,7 +165,7 @@ impl WeatherProvider for OpenWeatherMap {
             .json()
             .map_err(|x| format!("Failed to parse weather JSON: {:?}", x))?;
 
-        println!("Downloaded weather from OpenWeatherMap successfully");
+        info!("Downloaded weather from OpenWeatherMap successfully");
 
         let weather_state = json
             .weather

@@ -53,7 +53,7 @@ impl BackgroundManager {
                 }
 
                 if !directory.exists() {
-                    println!("art directory does not exist!");
+                    warn!("art directory does not exist!");
                     continue;
                 }
 
@@ -77,7 +77,7 @@ impl BackgroundManager {
                     let file = match new_files.choose(&mut rng) {
                         Some(file) => file,
                         None => {
-                            println!("No files found in art directory!");
+                            warn!("No files found in art directory!");
                             continue 'outer_loop;
                         }
                     };
@@ -87,7 +87,7 @@ impl BackgroundManager {
                     let bg_img = match bg_img {
                         Ok(msg) => msg,
                         Err(msg) => {
-                            println!(
+                            warn!(
                                 "Error while loading image {}: {:?}",
                                 file.path().display(),
                                 msg

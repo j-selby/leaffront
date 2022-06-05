@@ -30,6 +30,9 @@ extern crate rand;
 
 extern crate ctrlc;
 
+#[macro_use]
+extern crate log;
+
 mod config;
 mod state;
 
@@ -41,6 +44,7 @@ mod platform;
 
 use clap::{Arg, Command};
 
+use env_logger::Env;
 use leaffront_core::version::VersionInfo;
 
 use platform::*;
@@ -48,6 +52,9 @@ use platform::*;
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 fn main() {
+    let env = Env::default().default_filter_or("info");
+    env_logger::init_from_env(env);
+
     let matches = Command::new("Leaffront")
         .version(VERSION)
         .author("Selby (https://github.com/j-selby)")
@@ -78,16 +85,16 @@ fn main() {
         .get_matches();
 
     if matches.is_present("version") {
-        println!("Leaffront {}", VERSION);
-        println!("Backend: {:?}", BackendImpl::version());
-        println!("Input: {:?}", InputImpl::version());
-        println!("Renderer: {:?}", DrawerImpl::version());
+        info!("Leaffront {}", VERSION);
+        info!("Backend: {:?}", BackendImpl::version());
+        info!("Input: {:?}", InputImpl::version());
+        info!("Renderer: {:?}", DrawerImpl::version());
         return;
     }
 
     let config_file = matches.value_of("config").unwrap_or("config.toml");
 
-    println!("Leaffront {}", VERSION);
+    info!("Leaffront {}", VERSION);
 
     let config = config::load_config(config_file.into());
 

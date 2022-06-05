@@ -7,6 +7,8 @@ extern crate serde_derive;
 extern crate futures_util;
 extern crate inflector;
 extern crate toml;
+#[macro_use]
+extern crate log;
 
 pub mod bom;
 pub mod manager;

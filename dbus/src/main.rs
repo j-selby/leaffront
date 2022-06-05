@@ -21,8 +21,6 @@ fn main() {
     let client = redis::Client::open("redis://127.0.0.1/").unwrap();
     let sub = client.get_connection().unwrap();
 
-    println!("Ready!");
-
     NotificationServer::start(&server, move |notify| {
         let notification = Notification {
             name: notify.appname.to_owned(),

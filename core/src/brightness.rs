@@ -19,25 +19,27 @@ pub fn set_brightness(brightness: u8) -> Result<(), io::Error> {
             if child_metadata.is_dir() || child_metadata.is_symlink() {
                 // This is a possibility!
                 let mut child_path = child.path();
-                println!("Found screen controller classed object: {:?}", child_path);
+                debug!("Found screen controller classed object: {:?}", child_path);
                 child_path.push("brightness");
 
                 if child_path.exists() {
-                    println!("Found brightness endpoint.");
-
                     let mut file = File::create(path)?;
 
                     file.write(format!("{}", brightness).as_bytes())?;
 
+                    info!("Successfully set brightness to {}", brightness);
+
                     return Ok(());
+                } else {
+                    warn!("Endpoint is missing brightness endpoint")
                 }
             }
         }
     } else {
-        println!("Platform doesn't support Linux-style /sys endpoints");
+        warn!("Platform doesn't support Linux-style /sys endpoints");
     }
 
-    println!("No brightness control available for this platform.");
+    warn!("No brightness control available for this platform");
 
     Ok(())
 }

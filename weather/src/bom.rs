@@ -134,8 +134,8 @@ where
                 return Err(e);
             }
 
-            println!(
-                "BOM API: Failed to parse forecasts with {}-code geohash ({:?}), retrying with {}...",
+            warn!(
+                "Failed to parse forecasts with {}-code geohash ({:?}), retrying with {}...",
                 geohash.len(),
                 e,
                 geohash.len() - 1
@@ -185,8 +185,8 @@ impl WeatherProvider for BOM {
 
         // Attempt to see if we actually have a response
         if locations_response.data.len() > 1 {
-            println!(
-                "BOM API: returned multiple locations for {:?}, continuing with first:",
+            warn!(
+                "Returned multiple locations for {:?}, continuing with first:",
                 config.location
             );
         }
@@ -196,8 +196,8 @@ impl WeatherProvider for BOM {
             .get(0)
             .ok_or_else(|| format!("No response for location of {:?}", config.location))?;
 
-        println!(
-            "BOM API: Got {:?} for location request of {:?}",
+        info!(
+            "Got {:?} for location request of {:?}",
             location_info.name, config.location
         );
 
@@ -234,7 +234,7 @@ impl WeatherProvider for BOM {
             )
         })?;
 
-        println!("Downloaded weather from BOM successfully");
+        info!("Downloaded weather from BOM successfully");
 
         Ok(Weather {
             temperature: observations_response.data.temp,

@@ -3,6 +3,9 @@ extern crate leaffront_render_pi;
 
 extern crate evdev;
 
+#[macro_use]
+extern crate log;
+
 use leaffront_core::input::Input;
 use leaffront_core::version::VersionInfo;
 
@@ -38,7 +41,7 @@ impl PiInputThreaded {
 
         for device in devices {
             if device.supported_events().contains(EventType::ABSOLUTE) {
-                println!("Found input device: {:?}", device.name());
+                info!("Found input device: {:?}", device.name());
                 self.devices.push(device);
             }
         }
@@ -64,10 +67,10 @@ impl PiInputThreaded {
                         continue;
                     }
                     Err(e) => {
-                        println!("Device {:?} failed to send events: {:?}", device_name, e);
+                        warn!("Device {:?} failed to send events: {:?}", device_name, e);
                     }
                 },
-                None => println!(
+                None => warn!(
                     "Failed to read device name for {:?}",
                     device.physical_path()
                 ),
@@ -97,7 +100,7 @@ impl PiInputThreaded {
             mouse_y: self.mouse_y,
             mouse_down: self.mouse_down,
         }) {
-            println!("Shutting down input thread: {:?}", e);
+            warn!("Shutting down input thread: {:?}", e);
             false
         } else {
             true

@@ -76,7 +76,7 @@ pub fn main_loop(config: LeaffrontConfig) {
         ScreenState::Night => config.night.brightness,
     };
     match drawer.set_brightness(brightness) {
-        Err(v) => println!("Failed to set brightness: {:?}", v),
+        Err(v) => warn!("Failed to set brightness: {:?}", v),
         _ => {}
     }
 
@@ -106,9 +106,9 @@ pub fn main_loop(config: LeaffrontConfig) {
     let has_called = Arc::new(AtomicBool::new(false));
 
     ctrlc::set_handler(move || {
-        println!("Ctrl-C received");
+        info!("Ctrl-C received");
         if has_called.load(Ordering::SeqCst) {
-            println!("Forcing shutdown:");
+            warn!("Forcing shutdown:");
             ::std::process::exit(1);
         } else {
             has_called.store(true, Ordering::SeqCst);
@@ -146,7 +146,7 @@ pub fn main_loop(config: LeaffrontConfig) {
 
     let mut pointer_event: Option<Event> = None;
 
-    println!("Initialised successfully");
+    info!("Initialised successfully");
 
     input.run(drawer, move |input, drawer| {
         if !running.load(Ordering::SeqCst) || !input.do_continue() {
@@ -256,7 +256,7 @@ pub fn main_loop(config: LeaffrontConfig) {
                 };
                 if last_set_brightness != Some(brightness) {
                     match drawer.set_brightness(brightness) {
-                        Err(v) => println!("Failed to set brightness: {:?}", v),
+                        Err(v) => warn!("Failed to set brightness: {:?}", v),
                         _ => {}
                     }
 

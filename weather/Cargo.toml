@@ -6,7 +6,11 @@ authors = ["James <jselby@jselby.net>"]
 [dependencies]
 reqwest = {version = "0.11.10", features = ["blocking", "json"]}
 toml = "0.5.9"
+
 serde = "1.0"
 serde_derive = "1.0"
+
 Inflector = "0.11.4"
 futures-util = "0.3.21"
+
+log = "0.4.0"

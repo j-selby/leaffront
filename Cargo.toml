@@ -23,6 +23,9 @@ rand = "0.8.5"
 
 egui = "0.18.1"
 
+log = "0.4.0"
+env_logger = "0.8.4"
+
 leaffront-core = { path = "core" }
 leaffront-weather = { path = "weather" }
 
