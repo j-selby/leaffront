@@ -1,7 +1,7 @@
 [package]
 name = "leaffront-dbus"
 version = "0.1.0"
-authors = ["James <jselby@jselby.net>"]
+authors = ["James <1404334+j-selby@users.noreply.github.com>"]
 workspace = ".."
 
 [dependencies]
@@ -15,8 +15,8 @@ redis = "0.8.0"
 
 [package.metadata.deb]
 # .deb package for the Raspberry Pi
-maintainer = "James <jselby@jselby.net>"
-copyright = "2017, James <jselby@jselby.net>"
+maintainer = "James <1404334+j-selby@users.noreply.github.com>"
+copyright = "2017, James <1404334+j-selby@users.noreply.github.com>"
 license-file = ["../LICENSE", "0"]
 extended-description = """A bridge between Leaffront and D-Bus notifications."""
 depends = "dbus-user-session"

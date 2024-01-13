@@ -57,8 +57,8 @@ members = ["core", "weather",
 [package.metadata.deb]
 # .deb package for the Raspberry Pi
 features = ["raspberry_pi"]
-maintainer = "James <jselby@jselby.net>"
-copyright = "2017, James <jselby@jselby.net>"
+maintainer = "James <1404334+j-selby@users.noreply.github.com>"
+copyright = "2017, James <1404334+j-selby@users.noreply.github.com>"
 license-file = ["LICENSE", "0"]
 extended-description = """Leaffront uses DispmanX + OpenGL to provide a simple slideshow, \
 along with basic clock, date and weather information. \

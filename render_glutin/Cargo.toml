@@ -1,7 +1,7 @@
 [package]
 name = "leaffront-render-glutin"
 version = "0.1.0"
-authors = ["James <jselby@jselby.net>"]
+authors = ["James <1404334+j-selby@users.noreply.github.com>"]
 
 [dependencies]
 glutin = "0.28.0"
