@@ -2,7 +2,7 @@
 name = "leaffront-station"
 version = "0.4.0"
 license = "MIT"
-authors = ["James <jselby@jselby.net>"]
+authors = ["James <1404334+j-selby@users.noreply.github.com>"]
 description = "A weather and notification frontend for Leaffront, designed for embedded systems."
 repository = "https://github.com/j-selby/leaffront"
 readme = "README.md"
