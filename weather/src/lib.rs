@@ -4,7 +4,6 @@ extern crate reqwest;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
-extern crate futures_util;
 extern crate inflector;
 extern crate toml;
 #[macro_use]

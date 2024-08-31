@@ -5,11 +5,11 @@ authors = ["James <1404334+j-selby@users.noreply.github.com>"]
 
 [dependencies]
 glutin = "0.28.0"
-image = "0.24.2"
+image = "0.25.2"
 
 gl = "0.14.0"
 libc = "*"
 
-log = "0.4.0"
+log = "0.4.22"
 
 leaffront-core = { path = "../core" }

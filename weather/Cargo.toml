@@ -4,13 +4,12 @@ version = "0.1.0"
 authors = ["James <1404334+j-selby@users.noreply.github.com>"]
 
 [dependencies]
-reqwest = {version = "0.11.10", features = ["blocking", "json"]}
-toml = "0.5.9"
+reqwest = {version = "0.12.7", features = ["blocking", "json", "native-tls-vendored"]}
+toml = "0.8.19"
 
 serde = "1.0"
 serde_derive = "1.0"
 
 Inflector = "0.11.4"
-futures-util = "0.3.21"
 
-log = "0.4.0"
+log = "0.4.22"

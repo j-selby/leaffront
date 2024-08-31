@@ -3,7 +3,7 @@ use leaffront_core::render::Dimensions;
 
 use gl;
 
-use image::RgbaImage;
+use image::{EncodableLayout, RgbaImage};
 use std::mem::MaybeUninit;
 
 pub struct GlTexture {
@@ -73,7 +73,7 @@ impl GlTexture {
 
     /// Converts a image to a OpenGL reference.
     pub fn from_image(tex: &RgbaImage) -> Self {
-        GlTexture::from_bytes(tex.as_ref(), tex.width() as usize, tex.height() as usize)
+        GlTexture::from_bytes(tex.as_bytes(), tex.width() as usize, tex.height() as usize)
     }
 
     /// Binds this OpenGL texture. This struct must
