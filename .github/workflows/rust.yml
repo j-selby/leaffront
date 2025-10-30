@@ -36,3 +36,4 @@ jobs:
         with:
           executable-name: leaffront-station
           target: ${{ matrix.platform.target }}
+          changes-file: ""
