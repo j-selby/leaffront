@@ -10,7 +10,7 @@ use std::path::Path;
 use std::thread;
 use std::thread::JoinHandle;
 
-use rand::{prelude::*, rng};
+use rand::prelude::*;
 
 use image::open;
 use image::DynamicImage;
@@ -44,7 +44,7 @@ impl BackgroundManager {
             let directory = directory;
             let directory = Path::new(&directory);
 
-            let mut rng = rng();
+            let mut rng = thread_rng();
 
             'outer_loop: loop {
                 match rx.recv().unwrap() {

@@ -1,12 +1,7 @@
-use glutin::config::ConfigTemplateBuilder;
-use glutin::context::{ContextAttributesBuilder, PossiblyCurrentContext};
-use glutin::surface::{GlSurface, Surface, WindowSurface};
 use leaffront_core::render::texture::Texture;
 use leaffront_core::render::Drawer;
 
 use image::DynamicImage;
-use winit::dpi::LogicalSize;
-use winit::window::{Fullscreen, Window, WindowAttributes};
 
 use crate::texture::GlTexture;
 
@@ -19,20 +14,12 @@ use leaffront_core::render::color::Color;
 use leaffront_core::version::VersionInfo;
 
 use glutin;
-use glutin::config::Config;
-use glutin::config::GlConfig;
-use glutin::context::NotCurrentGlContext;
-use glutin::display::GlDisplay;
-use glutin::display::{Display, GetGlDisplay};
-
-use winit::event_loop::EventLoop;
-use winit::raw_window_handle::HasWindowHandle;
-
-use glutin_winit::{DisplayBuilder, GlWindow};
+use glutin::dpi::LogicalSize;
+use glutin::window::Fullscreen;
+use glutin::{ContextWrapper, PossiblyCurrent};
 
 use gl;
 
-use std::ffi::CString;
 use std::ptr;
 
 use std::mem::MaybeUninit;
@@ -47,11 +34,8 @@ enum DrawState {
 }
 
 pub struct GlutinDrawer {
-    pub events_loop: Option<EventLoop<()>>,
-    pub window: Window,
-    pub gl_display: Display,
-    pub gl_surface: Surface<WindowSurface>,
-    pub context: PossiblyCurrentContext,
+    pub events_loop: Option<glutin::event_loop::EventLoop<()>>,
+    pub gl_window: ContextWrapper<PossiblyCurrent, glutin::window::Window>,
 
     colored: GLSLShader,
     textured: GLSLShader,
@@ -78,20 +62,6 @@ pub struct GlutinDrawer {
     // Debugging
     transition_count: usize,
     calls: usize,
-}
-
-// Find the config with the maximum number of samples, so our triangle will be
-// smooth.
-pub fn gl_config_picker(configs: Box<dyn Iterator<Item = Config> + '_>) -> Config {
-    configs
-        .reduce(|accum, config| {
-            if config.num_samples() > accum.num_samples() {
-                config
-            } else {
-                accum
-            }
-        })
-        .unwrap()
 }
 
 impl GlutinDrawer {
@@ -198,53 +168,28 @@ impl GlutinDrawer {
     }
 
     pub fn new() -> Self {
-        let mut events_loop = EventLoop::new().expect("Failed to get event loop");
+        let events_loop = glutin::event_loop::EventLoop::new();
+        let window = glutin::window::WindowBuilder::new()
+            .with_title("Leaffront")
+            .with_inner_size(LogicalSize::new(1270.0, 720.0));
+        let context = glutin::ContextBuilder::new()
+            .with_gl(glutin::GlRequest::Latest)
+            .with_gl_profile(glutin::GlProfile::Core)
+            .with_vsync(true);
+        let gl_window = context
+            .build_windowed(window, &events_loop)
+            .expect("Failed to create GL window");
 
-        let template = ConfigTemplateBuilder::new()
-            .with_alpha_size(8)
-            .with_transparency(false);
-
-        let (window, gl_config) = DisplayBuilder::new()
-            .with_window_attributes(Some(
-                WindowAttributes::default()
-                    .with_title("Leaffront")
-                    .with_inner_size(LogicalSize::new(1270.0, 720.0)),
-            ))
-            .build(&mut events_loop, template, gl_config_picker)
-            .expect("Failed to build glutin display");
-
-        let window = window.expect("window wasn't created by glutin");
-
-        let context_attributes = ContextAttributesBuilder::new()
-            .build(window.window_handle().ok().map(|wh| wh.as_raw()));
-
-        let gl_display = gl_config.display();
-
-        let context = unsafe {
-            gl_display
-                .create_context(&gl_config, &context_attributes)
-                .expect("failed to create context")
+        let gl_window = unsafe {
+            gl_window
+                .make_current()
+                .expect("Failed to set GL window as current")
         };
 
-        let context: glutin::context::PossiblyCurrentContext = context.treat_as_possibly_current();
-
-        let attrs = window
-            .build_surface_attributes(Default::default())
-            .expect("Failed to build surface attributes");
-        let gl_surface = unsafe {
-            gl_config
-                .display()
-                .create_window_surface(&gl_config, &attrs)
-                .unwrap()
-        };
-
-        let (width, height): (u32, u32) = window.inner_size().into();
+        let (width, height): (u32, u32) = gl_window.window().inner_size().into();
 
         unsafe {
-            gl::load_with(|symbol| {
-                let symbol = CString::new(symbol).unwrap();
-                gl_display.get_proc_address(symbol.as_c_str()).cast()
-            });
+            gl::load_with(|symbol| gl_window.get_proc_address(symbol) as *const _);
 
             gl::DebugMessageCallback(Some(gl_debug_message), ptr::null_mut());
 
@@ -285,10 +230,7 @@ impl GlutinDrawer {
 
         GlutinDrawer {
             events_loop: Some(events_loop),
-            window,
-            gl_display,
-            gl_surface,
-            context,
+            gl_window,
             colored: colored_shader,
             textured: textured_shader,
             state: DrawState::None,
@@ -316,7 +258,7 @@ impl Drawer for GlutinDrawer {
 
         self.state = DrawState::None;
 
-        let (width, height): (u32, u32) = self.window.inner_size().into();
+        let (width, height): (u32, u32) = self.gl_window.window().inner_size().into();
 
         unsafe {
             gl::Viewport(0, 0, width as i32, height as i32);
@@ -327,7 +269,7 @@ impl Drawer for GlutinDrawer {
     fn end(&mut self) {
         self.configure_state(DrawState::None);
 
-        self.gl_surface.swap_buffers(&mut self.context).unwrap();
+        self.gl_window.swap_buffers().unwrap();
     }
 
     /// Clears the framebuffer.
@@ -365,14 +307,14 @@ impl Drawer for GlutinDrawer {
 
     /// Returns the width of the screen.
     fn get_width(&self) -> usize {
-        let (width, _): (u32, u32) = self.window.inner_size().into();
+        let (width, _): (u32, u32) = self.gl_window.window().inner_size().into();
 
         width as usize
     }
 
     /// Returns the height of the screen.
     fn get_height(&self) -> usize {
-        let (_, height): (u32, u32) = self.window.inner_size().into();
+        let (_, height): (u32, u32) = self.gl_window.window().inner_size().into();
 
         height as usize
     }
@@ -429,12 +371,12 @@ impl Drawer for GlutinDrawer {
     }
 
     fn set_fullscreen(&mut self, fullscreen: bool) {
-        self.window.set_fullscreen(if fullscreen {
+        self.gl_window.window().set_fullscreen(if fullscreen {
             Some(Fullscreen::Borderless(None))
         } else {
             None
         });
-        self.window.set_cursor_visible(!fullscreen)
+        self.gl_window.window().set_cursor_visible(!fullscreen)
     }
 
     fn get_transition_count(&self) -> usize {

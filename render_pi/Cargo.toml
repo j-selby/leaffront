@@ -11,6 +11,6 @@ egl = "0.2.7"
 opengles = { git = "https://github.com/seankerr/rust-opengles", rev = "9a139bc" }
 videocore = "0.1.3"
 
-image = "0.25.8"
+image = "0.25.2"
 
-libc = "0.2"
+libc = "0.1"

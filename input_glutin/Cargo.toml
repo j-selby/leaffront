@@ -5,8 +5,7 @@ authors = ["James <1404334+j-selby@users.noreply.github.com>"]
 edition = "2018"
 
 [dependencies]
-glutin = "0.32.3"
-winit = { version = "0.30.0", features = ["rwh_06"] }
+glutin = "0.28.0"
 
 leaffront-core = { path = "../core" }
 

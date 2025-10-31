@@ -5,12 +5,12 @@ authors = ["James <1404334+j-selby@users.noreply.github.com>"]
 edition = "2018"
 
 [dependencies]
-reqwest = {version = "0.12.24", features = ["blocking", "json", "native-tls-vendored"]}
-toml = "0.9.8"
+reqwest = {version = "0.12.12", features = ["blocking", "json", "native-tls-vendored"]}
+toml = "0.8.19"
 
 serde = "1.0"
 serde_derive = "1.0"
 
 Inflector = "0.11.4"
 
-log = "0.4.28"
+log = "0.4.22"

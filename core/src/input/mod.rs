@@ -11,7 +11,7 @@ pub trait Input {
         self,
         drawer: Self::Window,
         function: T,
-    );
+    ) -> !;
 
     /// Checks to see if the mouse/pointer is down
     fn is_mouse_down(&self) -> bool;

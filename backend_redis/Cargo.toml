@@ -1,13 +1,12 @@
 [package]
-name = "leaffront-input-pi"
+name = "leaffront-backend-redis"
 version = "0.1.0"
 authors = ["James <1404334+j-selby@users.noreply.github.com>"]
 edition = "2018"
 
 [dependencies]
-evdev = "0.11.0"
-log = "0.4.22"
-
 leaffront-core = { path = "../core" }
 
-leaffront-render-pi = { path = "../render_pi" }
+json = "0.11.13"
+
+redis = "0.8.0"

@@ -1,0 +1,29 @@
+[package]
+name = "leaffront-dbus"
+version = "0.1.0"
+authors = ["James <1404334+j-selby@users.noreply.github.com>"]
+workspace = ".."
+edition = "2018"
+
+[dependencies]
+notify-rust = "3.4.2"
+
+serde = "1.0.14"
+serde_derive = "1.0.14"
+serde_json = "*"
+
+redis = "0.8.0"
+
+[package.metadata.deb]
+# .deb package for the Raspberry Pi
+maintainer = "James <1404334+j-selby@users.noreply.github.com>"
+copyright = "2017, James <1404334+j-selby@users.noreply.github.com>"
+license-file = ["../LICENSE", "0"]
+extended-description = """A bridge between Leaffront and D-Bus notifications."""
+depends = "dbus-user-session"
+section = "utility"
+priority = "optional"
+assets = [
+    ["target/release/leaffront-dbus", "usr/bin/leaffront-dbus", "755"],
+    ["res/leaffront-dbus.service", "usr/lib/systemd/user/leaffront-dbus.service", "644"]
+]
