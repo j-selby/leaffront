@@ -13,8 +13,6 @@ extern crate leaffront_render_glutin;
 
 #[cfg(feature = "null_backend")]
 extern crate leaffront_backend_null;
-#[cfg(feature = "redis_backend")]
-extern crate leaffront_backend_redis;
 
 #[macro_use]
 extern crate serde_derive;
