@@ -2,6 +2,7 @@
 name = "leaffront-input-glutin"
 version = "0.1.0"
 authors = ["James <1404334+j-selby@users.noreply.github.com>"]
+edition = "2018"
 
 [dependencies]
 glutin = "0.28.0"

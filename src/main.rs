@@ -42,6 +42,8 @@ mod main_loop;
 
 mod platform;
 
+mod http;
+
 use clap::{Arg, Command};
 
 use env_logger::Env;

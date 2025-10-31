@@ -3,11 +3,13 @@ use leaffront_core::backend::Notification;
 
 use std::time::Instant;
 
+#[derive(PartialEq, Eq)]
 pub enum ScreenState {
     Day(Message),
     Night,
 }
 
+#[derive(PartialEq, Eq)]
 pub enum Message {
     Date,
     Weather,

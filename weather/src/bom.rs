@@ -1,7 +1,7 @@
 //! A BOM (Australia) frontend for the Weather API.
 #![allow(dead_code)]
 
-use {Weather, WeatherProvider};
+use crate::{Weather, WeatherProvider};
 
 use reqwest::header;
 

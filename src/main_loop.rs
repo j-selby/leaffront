@@ -9,6 +9,8 @@ use leaffront_weather::manager::WeatherManager;
 
 use crate::background::manager::BackgroundManager;
 
+use crate::http::RestAPI;
+use crate::http::RestAPIRequest;
 use crate::state::DisplayNotification;
 use crate::state::Message;
 use crate::state::ScreenState;
@@ -70,6 +72,12 @@ pub fn main_loop(config: LeaffrontConfig) {
     } else {
         ScreenState::Day(Message::Date)
     };
+
+    let http_server = match &config.sleep.http_endpoint {
+        Some(addr) => Some(RestAPI::start(addr)),
+        None => None,
+    };
+    let mut http_forced: Option<ScreenState> = None;
 
     let brightness = match state {
         ScreenState::Day(_) => config.day.brightness,
@@ -208,6 +216,16 @@ pub fn main_loop(config: LeaffrontConfig) {
             dirty_state = true;
         }
 
+        // Listen to HTTP events if required
+        if let Some(server) = http_server.as_ref() {
+            match server.read_message() {
+                Some(RestAPIRequest::SetDay) => http_forced = Some(ScreenState::Day(Message::Date)),
+                Some(RestAPIRequest::SetNight) => http_forced = Some(ScreenState::Night),
+                Some(RestAPIRequest::Reset) => http_forced = None,
+                None => {}
+            }
+        }
+
         let next_state = match &state {
             &ScreenState::Day(ref msg) => {
                 if touched {
@@ -220,7 +238,8 @@ pub fn main_loop(config: LeaffrontConfig) {
                 }
 
                 if night_cooldown.elapsed() > Duration::from_secs(config.night.night_tap_cooldown)
-                    && check_night(start_night, end_night)
+                    && ((check_night(start_night, end_night) && http_forced == None)
+                        || http_forced == Some(ScreenState::Night))
                 {
                     state_countdown = Instant::now();
                     Some(ScreenState::Night)
@@ -236,7 +255,7 @@ pub fn main_loop(config: LeaffrontConfig) {
                 if touched {
                     night_cooldown = Instant::now();
                     Some(ScreenState::Day(Message::Date))
-                } else if !check_night(start_night, end_night) {
+                } else if (!check_night(start_night, end_night) && http_forced == None) || http_forced == Some(ScreenState::Day(Message::Date)) {
                     Some(ScreenState::Day(Message::Date))
                 } else {
                     None

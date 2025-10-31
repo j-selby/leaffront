@@ -1,11 +1,11 @@
 pub mod color;
 pub mod texture;
 
-use pos::Position;
-use pos::Rect;
+use crate::pos::Position;
+use crate::pos::Rect;
 
-use render::color::Color;
-use render::texture::Texture;
+use crate::render::color::Color;
+use crate::render::texture::Texture;
 
 use image::DynamicImage;
 

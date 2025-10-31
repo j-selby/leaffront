@@ -20,6 +20,7 @@ pub struct LeaffrontConfig {
 pub struct Sleep {
     pub sleep_hour: u32,
     pub wakeup_hour: u32,
+    pub http_endpoint: Option<String>
 }
 
 #[derive(Deserialize, Debug)]

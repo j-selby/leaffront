@@ -46,36 +46,9 @@ Firstly, ensure that you have Rustup installed on your building machine, then
  (For Debian):
 
 ```bash
-sudo apt-get install gcc-4.7-arm-linux-gnueabihf
-rustup target add armv7-unknown-linux-gnueabihf
+apt-get install build-essential gcc-aarch64-linux-gnu
+rustup target add aarch64-unknown-linux-gnu
 ```
-
-Several dependencies require a generic path to `gcc`, so a few ugly symlink
- *may* be required:
-
-```bash
-ln -s /usr/bin/arm-linux-gnueabihf-gcc-4.7 /usr/bin/arm-linux-gnueabihf-gcc
-cp -r /usr/include/GL /usr/arm-linux-gnueabihf/include/GL
-```
-
-You are going to want to configure Cargo to find this linker in `~/.cargo/config`:
-
-```toml
-[target.armv7-unknown-linux-gnueabihf]
-linker = "arm-linux-gnueabihf-gcc-4.7"
-```
-
-Finally, you are going to need access to the Raspberry Pi's OpenGLES/DispmanX/etc
- stack. This can be found on a Raspberry Pi at `/opt/vc/lib`, which is 
- the location which will be assumed from here on. These artifacts can also
- be found here (as of writing): <https://github.com/raspberrypi/firmware/tree/master/opt/vc/lib>
-
-The supplied `station/build.sh` script will automatically invoke Cargo, strip
- the build artifact, and package it into a .deb file targeting
- `armv7-unknown-linux-gnueabihf`.
-
-As Leaffront directly uses the the hardware video scaler and OpenGLES,
- a X server cannot run at the same time.
 
 Using systemd
 -------------

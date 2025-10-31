@@ -1,8 +1,8 @@
 //! Fetches weather from OpenWeatherMap
 #![allow(dead_code)]
 
-use Weather;
-use WeatherProvider;
+use crate::Weather;
+use crate::WeatherProvider;
 
 use inflector::Inflector;
 

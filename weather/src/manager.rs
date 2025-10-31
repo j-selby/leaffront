@@ -1,8 +1,8 @@
 /// The weather manager controls a weather polling thread, and provides a mechanism to poll
 /// for weather whenever required.
-use {Weather, WeatherProviderKind};
+use crate::{Weather, WeatherProviderKind};
 
-use WeatherProvider;
+use crate::WeatherProvider;
 
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender};
@@ -11,9 +11,9 @@ use std::thread;
 
 use std::time::Duration;
 
-use openweathermap::OpenWeatherMap;
+use crate::openweathermap::OpenWeatherMap;
 
-use bom::BOM;
+use crate::bom::BOM;
 
 struct WeatherWorker {
     channel_sender: Sender<()>,

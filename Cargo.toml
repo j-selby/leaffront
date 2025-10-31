@@ -1,6 +1,6 @@
 [package]
 name = "leaffront-station"
-version = "0.4.0"
+version = "0.4.1"
 license = "MIT"
 authors = ["James <1404334+j-selby@users.noreply.github.com>"]
 description = "A weather and notification frontend for Leaffront, designed for embedded systems."
@@ -25,6 +25,9 @@ egui = "0.18.1"
 
 log = "0.4.22"
 env_logger = "0.11.5"
+
+tokio = { version = "1", features = ["full"] }
+warp = "0.3"
 
 leaffront-core = { path = "core" }
 leaffront-weather = { path = "weather" }

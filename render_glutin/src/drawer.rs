@@ -3,11 +3,11 @@ use leaffront_core::render::Drawer;
 
 use image::DynamicImage;
 
-use texture::GlTexture;
+use crate::texture::GlTexture;
 
-use shader::GLSLShader;
+use crate::shader::GLSLShader;
 
-use vbo::GLVBO;
+use crate::vbo::GLVBO;
 
 use leaffront_core::pos::Rect;
 use leaffront_core::render::color::Color;
