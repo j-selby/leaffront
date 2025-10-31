@@ -74,8 +74,7 @@ fn main() {
                 .help("Provide a custom configuration file")
                 .default_value("config.toml")
                 .value_name("FILE")
-                .required(false)
-                .takes_value(true),
+                .required(false),
         )
         .arg(
             Arg::new("version")
@@ -86,7 +85,7 @@ fn main() {
         )
         .get_matches();
 
-    if matches.is_present("version") {
+    if matches.contains_id("version") {
         info!("Leaffront {}", VERSION);
         info!("Backend: {:?}", BackendImpl::version());
         info!("Input: {:?}", InputImpl::version());
@@ -94,7 +93,10 @@ fn main() {
         return;
     }
 
-    let config_file = matches.value_of("config").unwrap_or("config.toml");
+    let config_file = matches
+        .get_one::<String>("config")
+        .map(|x| x.to_owned())
+        .unwrap_or_else(|| "config.toml".to_string());
 
     info!("Leaffront {}", VERSION);
 

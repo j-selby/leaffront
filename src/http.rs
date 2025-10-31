@@ -16,7 +16,7 @@ async fn start(http_endpoint: SocketAddr, sender: mpsc::Sender<RestAPIRequest>) 
     let sender_copy = Arc::new(sender);
 
     let reset_sender = sender_copy.clone();
-    let reset = warp::path!("api" / "reset").map(move || {
+    let reset = warp::path("api/reset").map(move || {
         reset_sender
             .send(RestAPIRequest::Reset)
             .expect("Failed to reset");
@@ -24,7 +24,7 @@ async fn start(http_endpoint: SocketAddr, sender: mpsc::Sender<RestAPIRequest>) 
     });
 
     let day_sender = sender_copy.clone();
-    let day = warp::path!("api" / "day").map(move || {
+    let day = warp::path("api/reset").map(move || {
         day_sender
             .send(RestAPIRequest::SetDay)
             .expect("Failed to set night");
@@ -32,7 +32,7 @@ async fn start(http_endpoint: SocketAddr, sender: mpsc::Sender<RestAPIRequest>) 
     });
 
     let night_sender = sender_copy;
-    let night = warp::path!("api" / "night").map(move || {
+    let night = warp::path("api/reset").map(move || {
         night_sender
             .send(RestAPIRequest::SetNight)
             .expect("Failed to set night");
@@ -40,8 +40,6 @@ async fn start(http_endpoint: SocketAddr, sender: mpsc::Sender<RestAPIRequest>) 
     });
 
     let api = reset.or(day.or(night));
-
-    warp::serve(api).run(http_endpoint).await;
 }
 
 pub struct RestAPI {
@@ -75,12 +73,17 @@ impl RestAPI {
             _runtime: runtime.clone(),
         };
 
-        runtime.spawn(start(
-            http_endpoint
-                .parse::<SocketAddr>()
-                .expect("Failed to parse socket address"),
-            request_tx,
-        ));
+        let http_endpoint=  
+                http_endpoint
+                    .parse::<SocketAddr>()
+                    .expect("Failed to parse socket address");
+
+        runtime.spawn(async move {
+            start(
+                http_endpoint,
+                request_tx,
+            ).await;
+        });
 
         api
     }

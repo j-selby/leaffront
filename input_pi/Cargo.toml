@@ -5,8 +5,8 @@ authors = ["James <1404334+j-selby@users.noreply.github.com>"]
 edition = "2018"
 
 [dependencies]
-evdev = "0.11.0"
-log = "0.4.22"
+evdev = "0.13.2"
+log = "0.4.28"
 
 leaffront-core = { path = "../core" }
 

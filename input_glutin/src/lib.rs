@@ -8,10 +8,14 @@ use leaffront_core::version::VersionInfo;
 
 use leaffront_render_glutin::drawer::GlutinDrawer;
 
-use glutin::event::Event;
-use glutin::event::WindowEvent;
-use glutin::event_loop::ControlFlow;
+use winit::application::ApplicationHandler;
+use winit::event::{ElementState, WindowEvent};
+use winit::event_loop::{ActiveEventLoop, ControlFlow};
+use winit::window::WindowId;
 
+use crate::glutin::prelude::GlSurface;
+
+use std::num::NonZero;
 use std::time::Instant;
 
 pub struct GlutinInput {
@@ -19,6 +23,60 @@ pub struct GlutinInput {
     mouse_x: usize,
     mouse_y: usize,
     running: bool,
+}
+
+/// The inner worker wraps winit events
+struct InnerWorker<'a, T: FnMut(&GlutinInput, &mut GlutinDrawer) -> (bool, Instant) + 'static> {
+    drawer: GlutinDrawer,
+    function: T,
+    next_time: Instant,
+    input_engine: &'a mut GlutinInput,
+}
+
+impl<T: FnMut(&GlutinInput, &mut GlutinDrawer) -> (bool, Instant) + 'static> ApplicationHandler
+    for InnerWorker<'_, T>
+{
+    fn resumed(&mut self, _event_loop: &ActiveEventLoop) {
+        // We don't support resumed
+    }
+
+    fn window_event(&mut self, event_loop: &ActiveEventLoop, id: WindowId, event: WindowEvent) {
+        match event {
+            WindowEvent::CloseRequested => {
+                self.input_engine.running = false;
+
+                // Enable any final cleanup
+                (self.function)(&self.input_engine, &mut self.drawer);
+
+                event_loop.exit();
+            }
+            WindowEvent::RedrawRequested => {
+                let (result, wait_till) = (self.function)(&self.input_engine, &mut self.drawer);
+
+                self.next_time = wait_till;
+
+                if !result {
+                    event_loop.exit();
+                } else {
+                    event_loop.set_control_flow(ControlFlow::WaitUntil(self.next_time.clone()));
+                }
+            }
+            WindowEvent::MouseInput { state, .. } => {
+                self.input_engine.mouse_down = state == ElementState::Pressed;
+            }
+            WindowEvent::CursorMoved { position, .. } => {
+                let (x, y): (i32, i32) = position.into();
+                self.input_engine.mouse_x = x as usize;
+                self.input_engine.mouse_y = y as usize;
+            }
+            WindowEvent::Resized(physical_size) => self.drawer.gl_surface.resize(
+                &self.drawer.context,
+                NonZero::new(physical_size.width).expect("Not zero!"),
+                NonZero::new(physical_size.height).expect("Not zero!"),
+            ),
+            _ => (),
+        }
+    }
 }
 
 impl GlutinInput {
@@ -38,51 +96,23 @@ impl Input for GlutinInput {
     fn run<T: FnMut(&Self, &mut Self::Window) -> (bool, Instant) + 'static>(
         mut self,
         mut drawer: Self::Window,
-        mut function: T,
-    ) -> ! {
-        let events = drawer
+        function: T,
+    ) {
+        let event_loop = drawer
             .events_loop
             .take()
             .expect("Should have an events loop to run!");
 
-        let mut next_time = Instant::now();
+        let mut worker = InnerWorker {
+            drawer,
+            function,
+            next_time: Instant::now(),
+            input_engine: &mut self,
+        };
 
-        events.run(move |event, _, control_flow| {
-            *control_flow = ControlFlow::WaitUntil(next_time.clone());
+        event_loop.set_control_flow(ControlFlow::Wait);
 
-            match event {
-                Event::LoopDestroyed => return,
-                Event::WindowEvent { event, .. } => match event {
-                    WindowEvent::CloseRequested => {
-                        self.running = false;
-                    }
-                    WindowEvent::MouseInput { state, .. } => {
-                        self.mouse_down = state == glutin::event::ElementState::Pressed;
-                    }
-                    WindowEvent::CursorMoved { position, .. } => {
-                        let (x, y): (i32, i32) = position.into();
-                        self.mouse_x = x as usize;
-                        self.mouse_y = y as usize;
-                    }
-                    WindowEvent::Resized(physical_size) => drawer.gl_window.resize(physical_size),
-                    _ => (),
-                },
-                Event::RedrawRequested(_) => {
-                    let (result, wait_till) = function(&self, &mut drawer);
-                    next_time = wait_till;
-                    if !result {
-                        *control_flow = ControlFlow::Exit;
-                    } else {
-                        *control_flow = ControlFlow::WaitUntil(next_time.clone());
-                    }
-                }
-                _ => (),
-            }
-
-            if Instant::now() >= next_time {
-                drawer.gl_window.window().request_redraw();
-            }
-        })
+        event_loop.run_app(&mut worker).expect("Failed to run app");
     }
 
     /// Checks to see if the mouse/pointer is down
